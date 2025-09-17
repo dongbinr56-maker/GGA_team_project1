@@ -374,7 +374,7 @@ REDIRECT_URI   = os.getenv("KAKAO_REDIRECT_URI", "https://hackteam32.streamlit.a
 STATE_SECRET   = os.getenv("KAKAO_STATE_SECRET") or os.getenv("OAUTH_STATE_SECRET") \
                 or (REST_API_KEY or "dev-secret")  # HMAC 비밀키(환경변수로 별도 세팅 권장)
 
-AUTHORIZE_URL  = "https://kauth.kakao.com/oauth/authorize"
+AUTHORIZE_URL  = f"https://kauth.kakao.com/oauth/authorize?client_id={REST_API_KEY}&redirect_uri={REDIRECT_URI}&response_type=code"
 TOKEN_URL      = "https://kauth.kakao.com/oauth/token"
 USERME_URL     = "https://kapi.kakao.com/v2/user/me"
 
