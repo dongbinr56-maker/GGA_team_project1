@@ -1,222 +1,597 @@
-# app.py
-# ============================================================
-# Kakao OAuth for Streamlit (No-session CSRF using HMAC state)
-# - 우상단 고정 네비바(화이트, 라운드, 그림자)
-# - 사이드바 숨김
-# - 로그인 전: "카카오 로그인" 노란 버튼
-# - 로그인 후: "로그아웃" + 원형 프로필 아바타
-# - CSRF state: 세션에 안 저장. HMAC 서명 토큰으로 검증 → 세션 갈려도 OK.
-# ============================================================
-
-import os, time, hmac, hashlib, requests, secrets
-import streamlit as st
-
-
-# ------------------------------[ 0) 페이지/레이아웃 ]---------------------------
-st.set_page_config(layout="wide", initial_sidebar_state="collapsed")
-
-st.markdown("""
-<style>
-  /* 사이드바/토글 제거 */
-  [data-testid="stSidebar"]{ display:none !important; }
-  [data-testid="collapsedControl"]{ display:none !important; }
-
-  /* 우상단 네비게이션 바 */
-  .navbar {
-    position: fixed;
-    top: 100; left: 0; right: 0;
-    height: 60px;
-    padding: 0 18px;
-    background: #ffffff;
-    display: flex; align-items: center; justify-content: flex-end;
-    box-shadow: 0 2px 6px rgba(0,0,0,0.06);
-    z-index: 1000;
-  }
-  /* 본문 상단 패딩(네비바 높이만큼) */
-  .block-container { padding-top: 78px; }
-
-  /* 버튼/아바타 */
-  .kakao-btn{
-    display:inline-flex; align-items:center; gap:8px;
-    padding:10px 14px; background:#FEE500; color:#000 !important;
-    border:1px solid rgba(0,0,0,.08); border-radius:10px;
-    font-weight:700; text-decoration:none !important;
-    box-shadow:0 1px 2px rgba(0,0,0,.08); cursor:pointer;
-  }
-  .kakao-btn:hover{ filter:brightness(0.96); }
-
-  .logout-btn{
-    display:inline-flex; align-items:center;
-    padding:9px 12px; margin-right:8px;
-    background:#fff; color:#222 !important;
-    border:1px solid #E5E7EB; border-radius:10px;
-    font-weight:600; text-decoration:none !important; cursor:pointer;
-  }
-  .logout-btn:hover{ background:#F9FAFB; }
-
-  .avatar{
-    width:40px; height:40px; border-radius:50%; object-fit:cover;
-    border:1px solid #E5E7EB; box-shadow:0 1px 2px rgba(0,0,0,0.05);
-  }
-
-  .nav-right{ display:flex; align-items:center; gap:10px; }
-</style>
-""", unsafe_allow_html=True)
-
-# ------------------------------[ 1) 카카오 OAuth 설정 ]------------------------
-REST_API_KEY   = os.getenv("KAKAO_REST_API_KEY")                # 콘솔 > REST API 키
-REDIRECT_URI   = os.getenv("KAKAO_REDIRECT_URI", "http://localhost:8501")  # 콘솔 등록값과 '완전 동일'
-STATE_SECRET   = os.getenv("KAKAO_STATE_SECRET") or os.getenv("OAUTH_STATE_SECRET") \
-                 or (REST_API_KEY or "dev-secret")  # HMAC 비밀키(환경변수로 별도 세팅 권장)
-
-AUTHORIZE_URL  = "https://kauth.kakao.com/oauth/authorize"
-TOKEN_URL      = "https://kauth.kakao.com/oauth/token"
-USERME_URL     = "https://kapi.kakao.com/v2/user/me"
-
-STATE_TTL_SEC  = 5 * 60  # state 유효시간(초) - 5분
-
-def _hmac_sha256(key: str, msg: str) -> str:
-    """HMAC-SHA256 hexdigest"""
-    return hmac.new(key.encode(), msg.encode(), hashlib.sha256).hexdigest()
-
-def make_state() -> str:
-    """
-    세션 사용 없이도 검증 가능한 state 생성.
-    (timestamp + nonce).[HMAC(timestamp + nonce)]
-    - 공격자가 SECRET을 모르므로 위조 불가
-    - TTL로 만료 검증
-    """
-    ts    = str(int(time.time()))
-    nonce = secrets.token_urlsafe(8)  # 가변성 확보
-    raw   = f"{ts}.{nonce}"
-    sig   = _hmac_sha256(STATE_SECRET, raw)
-    return f"{raw}.{sig}"
-
-def verify_state(state: str) -> bool:
-    """
-    되돌아온 state 검증:
-    - 구조: ts.nonce.sig
-    - sig == HMAC(ts.nonce)
-    - ts가 TTL 이내
-    """
-    if not state or state.count(".") != 2:
-        return False
-    ts, nonce, sig = state.split(".")
-    # 1) 시그니처 검증
-    expected = _hmac_sha256(STATE_SECRET, f"{ts}.{nonce}")
-    if not hmac.compare_digest(sig, expected):
-        return False
-    # 2) 만료 검증
-    try:
-        ts_i = int(ts)
-    except ValueError:
-        return False
-    if time.time() - ts_i > STATE_TTL_SEC:
-        return False
-    return True
-
-def build_auth_url() -> str:
-    """카카오 인가 페이지 URL 구성 (state = HMAC 서명 토큰)"""
-    state = make_state()
-    return (
-        f"{AUTHORIZE_URL}"
-        f"?client_id={REST_API_KEY}"
-        f"&redirect_uri={REDIRECT_URI}"
-        f"&response_type=code"
-        f"&state={state}"
-    )
-
-def exchange_code_for_token(code: str) -> dict:
-    data = {
-        "grant_type": "authorization_code",
-        "client_id": REST_API_KEY,
-        "redirect_uri": REDIRECT_URI,
-        "code": code,
-        # "client_secret": os.getenv("KAKAO_CLIENT_SECRET")  # 사용 중이면 주석 해제
-    }
-    r = requests.post(TOKEN_URL, data=data, timeout=10)
-    r.raise_for_status()
-    return r.json()
-
-def get_user_profile(access_token: str) -> dict:
-    r = requests.get(USERME_URL, headers={"Authorization": f"Bearer {access_token}"}, timeout=10)
-    r.raise_for_status()
-    return r.json()
-
-def extract_profile(user_me: dict):
-    acc  = (user_me or {}).get("kakao_account", {}) or {}
-    prof = acc.get("profile", {}) or {}
-    nick = prof.get("nickname") or None
-    img  = prof.get("profile_image_url") or prof.get("thumbnail_image_url") or None
-    if not nick or not img:
-        props = (user_me or {}).get("properties", {}) or {}
-        nick  = nick or props.get("nickname")
-        img   = img  or props.get("profile_image") or props.get("thumbnail_image")
-    return nick, img
-
-# ------------------------------[ 2) 콜백/로그아웃 처리 ]------------------------
-_qp = st.query_params if hasattr(st, "query_params") else st.experimental_get_query_params()
-
-def _one(name):
-    v = _qp.get(name)
-    return (v[0] if isinstance(v, list) and v else v)
-
-# 2-1) 로그아웃 우선 처리
-if _one("logout") == "1":
-    st.session_state.pop("kakao_token", None)
-    st.session_state.pop("kakao_profile", None)
-    if hasattr(st, "query_params"): st.query_params.clear()
-    else: st.experimental_set_query_params()
-    st.rerun()
-
-# 2-2) OAuth 콜백
-err   = _one("error")
-errd  = _one("error_description")
-code  = _one("code")
-state = _one("state")
-
-if err:
-    st.error(f"카카오 인증 에러: {err}\n{errd or ''}")
-
-elif code:
-    # ✅ 세션 기반 비교 X → HMAC 서명 토큰 검증
-    if not verify_state(state):
-        st.error("state 검증 실패(CSRF/만료). 다시 시도해주세요.")
-    else:
-        try:
-            token_json = exchange_code_for_token(code)
-            st.session_state.kakao_token   = token_json
-            st.session_state.kakao_profile = get_user_profile(token_json["access_token"])
-            # URL 정리 후 재렌더링
-            if hasattr(st, "query_params"): st.query_params.clear()
-            else: st.experimental_set_query_params()
-            st.rerun()
-        except requests.HTTPError as e:
-            st.exception(e)
-
-# ------------------------------[ 3) 우상단 네비바 ]-----------------------------
-auth_url = build_auth_url()
-nick, img_url = None, None
-if "kakao_profile" in st.session_state:
-    nick, img_url = extract_profile(st.session_state["kakao_profile"])
-
-nav = []
-nav.append("<div class='navbar'><div class='nav-right'>")
-if "kakao_token" not in st.session_state:
-    nav.append(f"<a class='kakao-btn' href='{auth_url}'>카카오 로그인</a>")
-else:
-    nav.append("<a class='logout-btn' href='?logout=1'>로그아웃</a>")
-    if img_url:
-        safe_nick = (nick or "").replace("<","&lt;").replace(">","&gt;")
-        nav.append(f"<img class='avatar' src='{img_url}' alt='avatar' title='{safe_nick}'/>")
-nav.append("</div></div>")
-st.markdown("\n".join(nav), unsafe_allow_html=True)
-
-# ------------------------------[ 4) 본문 ]-------------------------------------
-st.write("")  # 네비바 여백
-if "kakao_token" in st.session_state:
-    st.success(f"로그인됨: {(nick or '카카오 사용자')}")
-else:
-    st.info("로그인이 필요합니다.")
-
-st.write("여기에 본문 UI 넣기.")
+ (cd "$(git rev-parse --show-toplevel)" && git apply --3way <<'EOF' 
+diff --git a/team_project1.py b/team_project1.py
+index c618d7f0300f3afa9d097f0e93923316063d7537..60b26ee2fe98c85e967becd1656533ac66e74f54 100644
+--- a/team_project1.py
++++ b/team_project1.py
+@@ -1,222 +1,497 @@
+-# app.py
++import io
++import os
++import time
++import hmac
++import hashlib
++import secrets
++from datetime import datetime
++from typing import Dict, Optional
++
++import requests
++import streamlit as st
++from PIL import Image, ImageFilter, ImageOps
++import textwrap
++
++
+ # ============================================================
+ # Kakao OAuth for Streamlit (No-session CSRF using HMAC state)
+ # - 우상단 고정 네비바(화이트, 라운드, 그림자)
+ # - 사이드바 숨김
+ # - 로그인 전: "카카오 로그인" 노란 버튼
+ # - 로그인 후: "로그아웃" + 원형 프로필 아바타
+ # - CSRF state: 세션에 안 저장. HMAC 서명 토큰으로 검증 → 세션 갈려도 OK.
+ # ============================================================
+ 
+-import os, time, hmac, hashlib, requests, secrets
+-import streamlit as st
+-
+ 
+ # ------------------------------[ 0) 페이지/레이아웃 ]---------------------------
+ st.set_page_config(layout="wide", initial_sidebar_state="collapsed")
+ 
+-st.markdown("""
++st.markdown(
++    """
+ <style>
+-  /* 사이드바/토글 제거 */
+   [data-testid="stSidebar"]{ display:none !important; }
+   [data-testid="collapsedControl"]{ display:none !important; }
+ 
+-  /* 우상단 네비게이션 바 */
+   .navbar {
+     position: fixed;
+-    top: 100; left: 0; right: 0;
++    top: 0; left: 0; right: 0;
+     height: 60px;
+     padding: 0 18px;
+     background: #ffffff;
+     display: flex; align-items: center; justify-content: flex-end;
+     box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+     z-index: 1000;
+   }
+-  /* 본문 상단 패딩(네비바 높이만큼) */
+   .block-container { padding-top: 78px; }
+ 
+-  /* 버튼/아바타 */
+   .kakao-btn{
+     display:inline-flex; align-items:center; gap:8px;
+     padding:10px 14px; background:#FEE500; color:#000 !important;
+     border:1px solid rgba(0,0,0,.08); border-radius:10px;
+     font-weight:700; text-decoration:none !important;
+     box-shadow:0 1px 2px rgba(0,0,0,.08); cursor:pointer;
+   }
+   .kakao-btn:hover{ filter:brightness(0.96); }
+ 
+   .logout-btn{
+     display:inline-flex; align-items:center;
+     padding:9px 12px; margin-right:8px;
+     background:#fff; color:#222 !important;
+     border:1px solid #E5E7EB; border-radius:10px;
+     font-weight:600; text-decoration:none !important; cursor:pointer;
+   }
+   .logout-btn:hover{ background:#F9FAFB; }
+ 
+   .avatar{
+     width:40px; height:40px; border-radius:50%; object-fit:cover;
+     border:1px solid #E5E7EB; box-shadow:0 1px 2px rgba(0,0,0,0.05);
+   }
+ 
+   .nav-right{ display:flex; align-items:center; gap:10px; }
+ </style>
+-""", unsafe_allow_html=True)
++""",
++    unsafe_allow_html=True,
++)
++
+ 
+ # ------------------------------[ 1) 카카오 OAuth 설정 ]------------------------
+-REST_API_KEY   = os.getenv("KAKAO_REST_API_KEY")                # 콘솔 > REST API 키
+-REDIRECT_URI   = os.getenv("KAKAO_REDIRECT_URI", "http://localhost:8501")  # 콘솔 등록값과 '완전 동일'
+-STATE_SECRET   = os.getenv("KAKAO_STATE_SECRET") or os.getenv("OAUTH_STATE_SECRET") \
+-                 or (REST_API_KEY or "dev-secret")  # HMAC 비밀키(환경변수로 별도 세팅 권장)
++REST_API_KEY = os.getenv("KAKAO_REST_API_KEY")
++REDIRECT_URI = os.getenv("KAKAO_REDIRECT_URI", "http://localhost:8501")
++STATE_SECRET = (
++    os.getenv("KAKAO_STATE_SECRET")
++    or os.getenv("OAUTH_STATE_SECRET")
++    or (REST_API_KEY or "dev-secret")
++)
++
++AUTHORIZE_URL = "https://kauth.kakao.com/oauth/authorize"
++TOKEN_URL = "https://kauth.kakao.com/oauth/token"
++USERME_URL = "https://kapi.kakao.com/v2/user/me"
+ 
+-AUTHORIZE_URL  = "https://kauth.kakao.com/oauth/authorize"
+-TOKEN_URL      = "https://kauth.kakao.com/oauth/token"
+-USERME_URL     = "https://kapi.kakao.com/v2/user/me"
++STATE_TTL_SEC = 5 * 60
+ 
+-STATE_TTL_SEC  = 5 * 60  # state 유효시간(초) - 5분
+ 
+ def _hmac_sha256(key: str, msg: str) -> str:
+-    """HMAC-SHA256 hexdigest"""
+     return hmac.new(key.encode(), msg.encode(), hashlib.sha256).hexdigest()
+ 
++
+ def make_state() -> str:
+-    """
+-    세션 사용 없이도 검증 가능한 state 생성.
+-    (timestamp + nonce).[HMAC(timestamp + nonce)]
+-    - 공격자가 SECRET을 모르므로 위조 불가
+-    - TTL로 만료 검증
+-    """
+-    ts    = str(int(time.time()))
+-    nonce = secrets.token_urlsafe(8)  # 가변성 확보
+-    raw   = f"{ts}.{nonce}"
+-    sig   = _hmac_sha256(STATE_SECRET, raw)
++    ts = str(int(time.time()))
++    nonce = secrets.token_urlsafe(8)
++    raw = f"{ts}.{nonce}"
++    sig = _hmac_sha256(STATE_SECRET, raw)
+     return f"{raw}.{sig}"
+ 
++
+ def verify_state(state: str) -> bool:
+-    """
+-    되돌아온 state 검증:
+-    - 구조: ts.nonce.sig
+-    - sig == HMAC(ts.nonce)
+-    - ts가 TTL 이내
+-    """
+     if not state or state.count(".") != 2:
+         return False
+     ts, nonce, sig = state.split(".")
+-    # 1) 시그니처 검증
+     expected = _hmac_sha256(STATE_SECRET, f"{ts}.{nonce}")
+     if not hmac.compare_digest(sig, expected):
+         return False
+-    # 2) 만료 검증
+     try:
+         ts_i = int(ts)
+     except ValueError:
+         return False
+     if time.time() - ts_i > STATE_TTL_SEC:
+         return False
+     return True
+ 
++
+ def build_auth_url() -> str:
+-    """카카오 인가 페이지 URL 구성 (state = HMAC 서명 토큰)"""
+     state = make_state()
+     return (
+         f"{AUTHORIZE_URL}"
+         f"?client_id={REST_API_KEY}"
+         f"&redirect_uri={REDIRECT_URI}"
+         f"&response_type=code"
+         f"&state={state}"
+     )
+ 
++
+ def exchange_code_for_token(code: str) -> dict:
+     data = {
+         "grant_type": "authorization_code",
+         "client_id": REST_API_KEY,
+         "redirect_uri": REDIRECT_URI,
+         "code": code,
+-        # "client_secret": os.getenv("KAKAO_CLIENT_SECRET")  # 사용 중이면 주석 해제
+     }
+-    r = requests.post(TOKEN_URL, data=data, timeout=10)
+-    r.raise_for_status()
+-    return r.json()
++    response = requests.post(TOKEN_URL, data=data, timeout=10)
++    response.raise_for_status()
++    return response.json()
++
+ 
+ def get_user_profile(access_token: str) -> dict:
+-    r = requests.get(USERME_URL, headers={"Authorization": f"Bearer {access_token}"}, timeout=10)
+-    r.raise_for_status()
+-    return r.json()
++    response = requests.get(
++        USERME_URL,
++        headers={"Authorization": f"Bearer {access_token}"},
++        timeout=10,
++    )
++    response.raise_for_status()
++    return response.json()
++
+ 
+ def extract_profile(user_me: dict):
+-    acc  = (user_me or {}).get("kakao_account", {}) or {}
+-    prof = acc.get("profile", {}) or {}
+-    nick = prof.get("nickname") or None
+-    img  = prof.get("profile_image_url") or prof.get("thumbnail_image_url") or None
+-    if not nick or not img:
++    account = (user_me or {}).get("kakao_account", {}) or {}
++    profile = account.get("profile", {}) or {}
++    nickname = profile.get("nickname") or None
++    img = profile.get("profile_image_url") or profile.get("thumbnail_image_url") or None
++    if not nickname or not img:
+         props = (user_me or {}).get("properties", {}) or {}
+-        nick  = nick or props.get("nickname")
+-        img   = img  or props.get("profile_image") or props.get("thumbnail_image")
+-    return nick, img
++        nickname = nickname or props.get("nickname")
++        img = img or props.get("profile_image") or props.get("thumbnail_image")
++    return nickname, img
++
+ 
+ # ------------------------------[ 2) 콜백/로그아웃 처리 ]------------------------
+-_qp = st.query_params if hasattr(st, "query_params") else st.experimental_get_query_params()
++_query_params = (
++    st.query_params if hasattr(st, "query_params") else st.experimental_get_query_params()
++)
+ 
+-def _one(name):
+-    v = _qp.get(name)
+-    return (v[0] if isinstance(v, list) and v else v)
+ 
+-# 2-1) 로그아웃 우선 처리
+-if _one("logout") == "1":
++def _first_param(name: str):
++    value = _query_params.get(name)
++    return value[0] if isinstance(value, list) and value else value
++
++
++if _first_param("logout") == "1":
+     st.session_state.pop("kakao_token", None)
+     st.session_state.pop("kakao_profile", None)
+-    if hasattr(st, "query_params"): st.query_params.clear()
+-    else: st.experimental_set_query_params()
++    if hasattr(st, "query_params"):
++        st.query_params.clear()
++    else:
++        st.experimental_set_query_params()
+     st.rerun()
+ 
+-# 2-2) OAuth 콜백
+-err   = _one("error")
+-errd  = _one("error_description")
+-code  = _one("code")
+-state = _one("state")
+ 
+-if err:
+-    st.error(f"카카오 인증 에러: {err}\n{errd or ''}")
++error = _first_param("error")
++error_description = _first_param("error_description")
++code = _first_param("code")
++state = _first_param("state")
+ 
++if error:
++    st.error(f"카카오 인증 에러: {error}\n{error_description or ''}")
+ elif code:
+-    # ✅ 세션 기반 비교 X → HMAC 서명 토큰 검증
+     if not verify_state(state):
+         st.error("state 검증 실패(CSRF/만료). 다시 시도해주세요.")
+     else:
+         try:
+             token_json = exchange_code_for_token(code)
+-            st.session_state.kakao_token   = token_json
++            st.session_state.kakao_token = token_json
+             st.session_state.kakao_profile = get_user_profile(token_json["access_token"])
+-            # URL 정리 후 재렌더링
+-            if hasattr(st, "query_params"): st.query_params.clear()
+-            else: st.experimental_set_query_params()
++            if hasattr(st, "query_params"):
++                st.query_params.clear()
++            else:
++                st.experimental_set_query_params()
+             st.rerun()
+-        except requests.HTTPError as e:
+-            st.exception(e)
++        except requests.HTTPError as exc:
++            st.exception(exc)
++
+ 
+ # ------------------------------[ 3) 우상단 네비바 ]-----------------------------
+ auth_url = build_auth_url()
+-nick, img_url = None, None
++nickname, img_url = None, None
+ if "kakao_profile" in st.session_state:
+-    nick, img_url = extract_profile(st.session_state["kakao_profile"])
++    nickname, img_url = extract_profile(st.session_state["kakao_profile"])
+ 
+-nav = []
+-nav.append("<div class='navbar'><div class='nav-right'>")
++nav_parts = ["<div class='navbar'><div class='nav-right'>"]
+ if "kakao_token" not in st.session_state:
+-    nav.append(f"<a class='kakao-btn' href='{auth_url}'>카카오 로그인</a>")
++    nav_parts.append(f"<a class='kakao-btn' href='{auth_url}'>카카오 로그인</a>")
+ else:
+-    nav.append("<a class='logout-btn' href='?logout=1'>로그아웃</a>")
++    nav_parts.append("<a class='logout-btn' href='?logout=1'>로그아웃</a>")
+     if img_url:
+-        safe_nick = (nick or "").replace("<","&lt;").replace(">","&gt;")
+-        nav.append(f"<img class='avatar' src='{img_url}' alt='avatar' title='{safe_nick}'/>")
+-nav.append("</div></div>")
+-st.markdown("\n".join(nav), unsafe_allow_html=True)
++        safe_nick = (nickname or "").replace("<", "&lt;").replace(">", "&gt;")
++        nav_parts.append(
++            f"<img class='avatar' src='{img_url}' alt='avatar' title='{safe_nick}'/>"
++        )
++nav_parts.append("</div></div>")
++st.markdown("\n".join(nav_parts), unsafe_allow_html=True)
++
++
++# ------------------------------[ 4) 복원 유틸 함수 ]---------------------------
++def ensure_restoration_state() -> Dict:
++    if "restoration" not in st.session_state:
++        st.session_state.restoration = {
++            "upload_digest": None,
++            "original_bytes": None,
++            "photo_type": None,
++            "description": "",
++            "current_bytes": None,
++            "counts": {"color": 0, "upscale": 0, "denoise": 0, "story": 0},
++            "history": [],
++            "story": None,
++        }
++    return st.session_state.restoration
++
++
++def image_from_bytes(data: bytes) -> Image.Image:
++    image = Image.open(io.BytesIO(data))
++    image = ImageOps.exif_transpose(image)
++    return image.convert("RGB")
++
++
++def image_to_bytes(image: Image.Image) -> bytes:
++    buffer = io.BytesIO()
++    image.save(buffer, format="PNG")
++    return buffer.getvalue()
++
++
++def colorize_image(image: Image.Image) -> Image.Image:
++    gray = image.convert("L")
++    colorized = ImageOps.colorize(gray, black="#1e1e1e", white="#f8efe3", mid="#88a6c6")
++    return colorized.convert("RGB")
++
++
++def upscale_image(image: Image.Image) -> Image.Image:
++    width, height = image.size
++    factor = 2
++    return image.resize((width * factor, height * factor), Image.LANCZOS)
++
++
++def denoise_image(image: Image.Image) -> Image.Image:
++    smoothed = image.filter(ImageFilter.MedianFilter(size=3))
++    return smoothed.filter(ImageFilter.SMOOTH_MORE)
++
++
++def format_status(counts: Dict[str, int]) -> str:
++    return (
++        f"[컬러화 {'✔' if counts['color'] else '✖'} / "
++        f"해상도 {counts['upscale']}회 / 노이즈 {counts['denoise']}회]"
++    )
++
++
++def add_history_entry(label: str, image_bytes: bytes, note: Optional[str] = None):
++    restoration = ensure_restoration_state()
++    entry = {
++        "label": label,
++        "bytes": image_bytes,
++        "status": dict(restoration["counts"]),
++        "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
++        "note": note,
++    }
++    restoration["history"].append(entry)
++    restoration["current_bytes"] = image_bytes
++
++
++def reset_restoration(upload_digest: str, original_bytes: bytes, photo_type: str, description: str):
++    restoration = ensure_restoration_state()
++    restoration.update(
++        {
++            "upload_digest": upload_digest,
++            "original_bytes": original_bytes,
++            "photo_type": photo_type,
++            "description": description,
++            "current_bytes": original_bytes,
++            "counts": {"color": 0, "upscale": 0, "denoise": 0, "story": 0},
++            "history": [],
++            "story": None,
++        }
++    )
++
++
++def build_story(description: str, counts: Dict[str, int], photo_type: str) -> str:
++    base = description.strip() or "이 사진"
++    story_lines = []
++
++    intro = f"{base}은(는) 조심스럽게 복원 과정을 거치고 있습니다."
++    story_lines.append(intro)
++
++    if photo_type == "흑백":
++        if counts["color"]:
++            story_lines.append(
++                "흑백으로 남아 있던 순간에 색을 덧입히자 잊혔던 온기와 공기가 되살아났습니다."
++            )
++        else:
++            story_lines.append("아직 색을 입히지 못한 채 시간 속에서 기다리고 있습니다.")
++
++    if counts["upscale"]:
++        story_lines.append(
++            f"세부 묘사를 살리기 위해 해상도 보정을 {counts['upscale']}회 반복하며 흐릿했던 윤곽을 또렷하게 다듬었습니다."
++        )
++    if counts["denoise"]:
++        story_lines.append(
++            f"잡음을 정리하는 과정도 {counts['denoise']}회 진행되어 사진 속 인물의 표정과 배경이 한층 차분해졌습니다."
++        )
++
++    if not counts["upscale"] and not counts["denoise"] and counts["color"]:
++        story_lines.append("색만 더했을 뿐인데도 장면의 감정이 살아 움직이는 듯합니다.")
++
++    climax = (
++        "복원된 이미지를 바라보는 지금, 사진 속 이야기가 현재의 우리에게 말을 건네는 듯합니다."
++    )
++    story_lines.append(climax)
++
++    outro = "이 장면이 전하고 싶은 메시지가 있다면, 그것은 기억을 계속 이어가자는 마음일지도 모릅니다."
++    story_lines.append(outro)
++
++    wrapped = [textwrap.fill(line, width=46) for line in story_lines]
++    return "\n\n".join(wrapped)
++
++
++def handle_auto_colorization(photo_type: str):
++    restoration = ensure_restoration_state()
++    if photo_type != "흑백":
++        return
++    if restoration["counts"]["color"]:
++        return
++    original = image_from_bytes(restoration["current_bytes"])
++    colorized = colorize_image(original)
++    restoration["counts"]["color"] += 1
++    bytes_data = image_to_bytes(colorized)
++    restoration["story"] = None
++    add_history_entry("컬러 복원 (자동)", bytes_data, note="흑백 이미지를 기본 팔레트로 색보정했습니다.")
++
++
++def can_run_operation(operation: str, allow_repeat: bool) -> bool:
++    restoration = ensure_restoration_state()
++    count = restoration["counts"].get(operation, 0)
++    if allow_repeat:
++        return count < 3
++    return count == 0
++
++
++def run_upscale():
++    restoration = ensure_restoration_state()
++    image = image_from_bytes(restoration["current_bytes"])
++    upscaled = upscale_image(image)
++    restoration["counts"]["upscale"] += 1
++    bytes_data = image_to_bytes(upscaled)
++    restoration["story"] = None
++    add_history_entry("해상도 업", bytes_data, note="ESRGAN 대체 알고리즘(샘플)으로 2배 업스케일했습니다.")
++
++
++def run_denoise():
++    restoration = ensure_restoration_state()
++    image = image_from_bytes(restoration["current_bytes"])
++    denoised = denoise_image(image)
++    restoration["counts"]["denoise"] += 1
++    bytes_data = image_to_bytes(denoised)
++    restoration["story"] = None
++    add_history_entry("노이즈 제거", bytes_data, note="NAFNet 대체 필터(샘플)로 노이즈를 완화했습니다.")
++
++
++def run_story_generation():
++    restoration = ensure_restoration_state()
++    text = build_story(restoration["description"], restoration["counts"], restoration["photo_type"])
++    restoration["counts"]["story"] += 1
++    restoration["story"] = {
++        "text": text,
++        "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
++        "status": dict(restoration["counts"]),
++    }
++
++
++# ------------------------------[ 5) 본문 UI ]----------------------------------
++st.title("📌 사진 복원 + 스토리 생성")
+ 
+-# ------------------------------[ 4) 본문 ]-------------------------------------
+-st.write("")  # 네비바 여백
+ if "kakao_token" in st.session_state:
+-    st.success(f"로그인됨: {(nick or '카카오 사용자')}")
++    st.success(f"로그인됨: {(nickname or '카카오 사용자')}")
++else:
++    st.info("카카오 로그인을 진행하면 복원 내역이 세션에 보존됩니다.")
++
++restoration_state = ensure_restoration_state()
++
++with st.container():
++    st.subheader("1. 사진 업로드")
++    photo_type = st.radio("사진 유형", ["흑백", "컬러"], horizontal=True, key="photo_type_selector")
++    description = st.text_input("사진에 대한 간단한 설명", key="photo_description", placeholder="예: 1970년대 외할아버지의 결혼식")
++    uploaded_file = st.file_uploader("사진 파일 업로드", type=["png", "jpg", "jpeg", "bmp", "tiff"], key="photo_uploader")
++
++    if uploaded_file is not None:
++        file_bytes = uploaded_file.getvalue()
++        digest = hashlib.sha1(file_bytes).hexdigest()
++        if restoration_state["upload_digest"] != digest:
++            reset_restoration(digest, file_bytes, photo_type, description)
++            handle_auto_colorization(photo_type)
++        else:
++            restoration_state["description"] = description
++            restoration_state["photo_type"] = photo_type
++
++allow_repeat = st.checkbox("고급 옵션(실험적) - 동일 작업 반복 허용 (최대 3회)")
++if allow_repeat:
++    st.warning("⚠ 동일 작업 반복은 처리 시간이 길어지거나 이미지 손상을 유발할 수 있습니다.")
++
++if restoration_state["original_bytes"] is None:
++    st.info("사진을 업로드하면 복원 옵션이 활성화됩니다.")
+ else:
+-    st.info("로그인이 필요합니다.")
++    st.subheader("2. 복원 옵션")
++
++    cols = st.columns(3)
++    with cols[0]:
++        can_upscale = can_run_operation("upscale", allow_repeat)
++        upscale_clicked = st.button("해상도 업", use_container_width=True, disabled=not can_upscale)
++        if upscale_clicked:
++            run_upscale()
++    with cols[1]:
++        can_denoise = can_run_operation("denoise", allow_repeat)
++        denoise_clicked = st.button("노이즈 제거", use_container_width=True, disabled=not can_denoise)
++        if denoise_clicked:
++            run_denoise()
++    with cols[2]:
++        can_story = can_run_operation("story", allow_repeat)
++        story_clicked = st.button("스토리 생성", use_container_width=True, disabled=not can_story)
++        if story_clicked:
++            run_story_generation()
++
++    st.divider()
++
++    col_original, col_result = st.columns(2)
++    with col_original:
++        st.subheader("원본 이미지")
++        st.image(restoration_state["original_bytes"], use_column_width=True)
++        st.caption(format_status({"color": 0, "upscale": 0, "denoise": 0}))
++
++    with col_result:
++        st.subheader("복원 결과")
++        if restoration_state["history"]:
++            latest = restoration_state["history"][-1]
++            st.image(latest["bytes"], use_column_width=True, caption=latest["label"])
++            st.caption(format_status(latest["status"]))
++            if latest.get("note"):
++                st.markdown(f"*{latest['note']}*")
++        else:
++            st.info("아직 수행된 복원 작업이 없습니다.")
++
++    if len(restoration_state["history"]) > 1:
++        with st.expander("전체 작업 히스토리"):
++            for idx, entry in enumerate(restoration_state["history"], 1):
++                st.markdown(f"**{idx}. {entry['label']}** ({entry['timestamp']})")
++                st.image(entry["bytes"], use_column_width=True)
++                st.caption(format_status(entry["status"]))
++                if entry.get("note"):
++                    st.write(entry["note"])
++                st.markdown("---")
++
++    if restoration_state.get("story"):
++        st.subheader("스토리")
++        story_info = restoration_state["story"]
++        st.markdown(story_info["text"])
++        st.caption(
++            f"생성 시각: {story_info['timestamp']} / {format_status(story_info['status'])}"
++        )
++
+ 
+-st.write("여기에 본문 UI 넣기.")
++st.markdown("---")
++st.caption(
++    "*DeOldify, ESRGAN, NAFNet 등의 실제 모델 연동을 위한 자리 표시자로, 현재는 샘플 필터를 사용합니다.*"
++)
+ 
+EOF
+)
