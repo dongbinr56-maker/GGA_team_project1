@@ -518,8 +518,8 @@ st.markdown("\n".join(nav), unsafe_allow_html=True)
 st.markdown(
     """
 <div class="hero-title">
-    <h1>오래된 사진 복원 : AI로 온라인 사진 복원</h1>
-    <p>온라인에서 빠르고 쉬운 복원을 경험해보세요. 손상·흔적 제거, 색채 디테일 복원.</p>
+    <h1>사진 복원 : AI로 온라인 사진 복원</h1>
+    <p>온라서 빠르고 쉬운 복원을 경험해보세요. 손상·흔적 제거, 색채 디테일 복원.</p>
 </div>
 """,
     unsafe_allow_html=True,
