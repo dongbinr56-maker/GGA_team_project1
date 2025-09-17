@@ -1,3 +1,4 @@
+import base64
 import io
 import os
 import time
@@ -5,6 +6,7 @@ import hmac
 import hashlib
 import secrets
 from datetime import datetime
+from pathlib import Path
 from typing import Dict, Optional
 
 import requests
@@ -68,6 +70,196 @@ st.markdown(
     }
 
     .nav-right{ display:flex; align-items:center; gap:10px; }
+
+    body{ background:#f8fafc; }
+
+    .hero-section{
+    margin-top:32px;
+    padding:32px 36px;
+    border-radius:28px;
+    background:linear-gradient(135deg, rgba(255,240,247,0.9), rgba(236,233,255,0.85));
+    border:1px solid rgba(255,255,255,0.6);
+    box-shadow:0 24px 60px -34px rgba(15,23,42,0.4);
+    display:grid;
+    grid-template-columns:minmax(0,1.1fr) minmax(0,0.9fr);
+    gap:48px;
+    align-items:center;
+    position:relative;
+    overflow:hidden;
+    }
+
+    .hero-section::after{
+    content:"";
+    position:absolute;
+    inset:0;
+    background:radial-gradient(circle at 20% -10%, rgba(244,114,182,0.35), transparent 55%),
+              radial-gradient(circle at 80% 120%, rgba(129,140,248,0.35), transparent 60%);
+    z-index:0;
+    }
+
+    .hero-text, .hero-visual{ position:relative; z-index:1; }
+
+    .hero-badge{
+    display:inline-flex;
+    align-items:center;
+    gap:6px;
+    padding:6px 14px;
+    border-radius:999px;
+    background:rgba(255,255,255,0.85);
+    color:#ec4899;
+    font-size:0.82rem;
+    font-weight:600;
+    letter-spacing:0.04em;
+    text-transform:uppercase;
+    box-shadow:0 8px 20px -12px rgba(236,72,153,0.8);
+    margin-bottom:18px;
+    }
+
+    .hero-title{
+    font-size:2.8rem;
+    font-weight:800;
+    line-height:1.2;
+    color:#111827;
+    margin-bottom:18px;
+    }
+
+    .hero-title span{ color:#ec4899; }
+
+    .hero-subtext{
+    font-size:1.05rem;
+    color:#4b5563;
+    line-height:1.7;
+    margin-bottom:28px;
+    max-width:520px;
+    }
+
+    .hero-buttons{ display:flex; flex-wrap:wrap; gap:14px; align-items:center; }
+
+    .hero-buttons a{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    gap:8px;
+    padding:14px 22px;
+    border-radius:999px;
+    font-weight:700;
+    text-decoration:none !important;
+    transition:transform 0.25s ease, box-shadow 0.25s ease;
+    box-shadow:0 10px 30px -15px rgba(236,72,153,0.75);
+    }
+
+    .cta-primary{
+    background:linear-gradient(120deg, #ec4899, #fb7185);
+    color:#fff !important;
+    }
+
+    .cta-primary:hover{ transform:translateY(-2px); box-shadow:0 20px 35px -20px rgba(236,72,153,0.9); }
+
+    .cta-secondary{
+    background:rgba(255,255,255,0.9);
+    color:#ec4899 !important;
+    border:1px solid rgba(236,72,153,0.3);
+    box-shadow:0 12px 24px -18px rgba(236,72,153,0.5);
+    }
+
+    .cta-secondary:hover{ transform:translateY(-2px); }
+
+    .cta-caption{
+    display:block;
+    margin-top:10px;
+    color:#6b7280;
+    font-size:0.9rem;
+    }
+
+    .hero-compare{
+    position:relative;
+    width:100%;
+    aspect-ratio:4/3;
+    border-radius:26px;
+    overflow:hidden;
+    background:#111827;
+    box-shadow:0 34px 60px -30px rgba(15,23,42,0.55);
+    }
+
+    .hero-compare img{
+    position:absolute;
+    inset:0;
+    width:100%;
+    height:100%;
+    object-fit:cover;
+    }
+
+    .hero-compare img.after{ clip-path:inset(0 0 0 52%); }
+
+    .hero-compare::after{
+    content:"";
+    position:absolute;
+    top:0; bottom:0; left:52%;
+    width:3px;
+    background:rgba(255,255,255,0.92);
+    box-shadow:0 0 0 1px rgba(15,23,42,0.1);
+    }
+
+    .hero-label{
+    position:absolute;
+    top:18px;
+    padding:7px 14px;
+    border-radius:999px;
+    font-size:0.78rem;
+    font-weight:600;
+    letter-spacing:0.05em;
+    text-transform:uppercase;
+    }
+
+    .hero-label.before{ left:18px; background:rgba(15,23,42,0.75); color:#f9fafb; }
+    .hero-label.after{ right:18px; background:rgba(236,72,153,0.85); color:#fff; }
+
+    .section-title{
+    font-size:1.85rem;
+    font-weight:800;
+    color:#111827;
+    margin-bottom:10px;
+    }
+
+    .section-lead{
+    font-size:1rem;
+    color:#4b5563;
+    margin-bottom:26px;
+    }
+
+    .stButton button{
+    border-radius:14px;
+    padding:12px 18px;
+    font-weight:700;
+    border:none;
+    background:linear-gradient(120deg, #ec4899, #f97316);
+    color:#fff;
+    box-shadow:0 15px 40px -24px rgba(236,72,153,0.9);
+    }
+
+    .stButton button:hover{
+    filter:brightness(0.98);
+    }
+
+    .stButton button:disabled{
+    background:#e5e7eb;
+    color:#9ca3af;
+    box-shadow:none;
+    }
+
+    .stRadio > div{ display:flex; gap:16px; }
+    .stRadio label{ font-weight:600; color:#374151; }
+
+    @media (max-width: 1100px){
+    .hero-section{ grid-template-columns:1fr; padding:26px 24px; }
+    .hero-title{ font-size:2.3rem; }
+    .hero-subtext{ max-width:none; }
+    }
+
+    @media (max-width: 640px){
+    .hero-buttons{ flex-direction:column; align-items:flex-start; }
+    .hero-compare{ aspect-ratio:3/4; }
+    }
 </style>
 """,
     unsafe_allow_html=True,
@@ -226,6 +418,80 @@ else:
         )
 nav_parts.append("</div></div>")
 st.markdown("\n".join(nav_parts), unsafe_allow_html=True)
+
+
+# ------------------------------[ 3-1) 히어로 섹션 ]----------------------------
+@st.cache_data(show_spinner=False)
+def load_demo_compare_images() -> Dict[str, Optional[str]]:
+    """Load demo before/after images as base64 strings for the hero preview."""
+
+    base_dir = Path(__file__).resolve().parent
+
+    def _read(path: Path) -> Optional[str]:
+        if not path.exists():
+            return None
+        return base64.b64encode(path.read_bytes()).decode("utf-8")
+
+    return {
+        "before": _read(base_dir / "before.png"),
+        "after": _read(base_dir / "after.png"),
+    }
+
+
+def render_hero_section(auth_url: str, is_logged_in: bool) -> None:
+    images = load_demo_compare_images()
+    before_b64 = images.get("before")
+    after_b64 = images.get("after")
+
+    if before_b64 and after_b64:
+        compare_html = f"""
+        <div class='hero-compare'>
+            <img src='data:image/png;base64,{before_b64}' alt='복원 전' class='hero-img before'/>
+            <img src='data:image/png;base64,{after_b64}' alt='복원 후' class='hero-img after'/>
+            <span class='hero-label before'>Before</span>
+            <span class='hero-label after'>After</span>
+        </div>
+        """
+    else:
+        compare_html = """
+        <div class='hero-compare' style='display:flex;align-items:center;justify-content:center;background:#f1f5f9;'>
+            <span style='color:#94a3b8;font-weight:600;'>샘플 이미지를 불러오지 못했습니다.</span>
+        </div>
+        """
+
+    primary_label = "복원 작업 시작하기" if is_logged_in else "카카오 계정으로 계속"
+    primary_href = "#restore-app" if is_logged_in else auth_url
+    caption = (
+        "로그인 상태입니다. 바로 복원을 시작해보세요."
+        if is_logged_in
+        else "카카오 로그인 시 복원 기록이 세션에 보존됩니다."
+    )
+
+    hero_html = f"""
+    <section class='hero-section'>
+        <div class='hero-text'>
+            <div class='hero-badge'>AI Photo Revival</div>
+            <h1 class='hero-title'>오래된 사진 복원 : <span>AI로 온라인 사진 복원</span></h1>
+            <p class='hero-subtext'>흑백의 시간을 되살리고, 선명한 디테일까지 복원하는 프리미엄 AI 파이프라인. 업로드만 하면 자동 색보정, 노이즈 제거, 해상도 업스케일까지 한 번에 경험할 수 있습니다.</p>
+            <div class='hero-buttons'>
+                <a class='cta-primary' href='{primary_href}'>
+                    {primary_label}
+                </a>
+                <a class='cta-secondary' href='#restore-app'>게스트 모드로 먼저 체험하기</a>
+            </div>
+            <small class='cta-caption'>{caption}</small>
+        </div>
+        <div class='hero-visual'>
+            {compare_html}
+        </div>
+    </section>
+    """
+
+    st.markdown(hero_html, unsafe_allow_html=True)
+
+
+# 히어로 섹션 렌더링
+render_hero_section(auth_url, "kakao_token" in st.session_state)
 
 
 # ------------------------------[ 4) 복원 유틸 함수 ]---------------------------
@@ -402,12 +668,20 @@ def run_story_generation():
 
 
 # ------------------------------[ 5) 본문 UI ]----------------------------------
-st.title("📌 사진 복원 + 스토리 생성")
+st.markdown("<div id='restore-app'></div>", unsafe_allow_html=True)
+st.markdown(
+    "<h2 class='section-title'>AI 복원 워크플로우</h2>",
+    unsafe_allow_html=True,
+)
+st.markdown(
+    "<p class='section-lead'>업로드 → 복원 옵션 실행 → 스토리 생성까지 한눈에 진행할 수 있는 단계별 워크플로우입니다.</p>",
+    unsafe_allow_html=True,
+)
 
 if "kakao_token" in st.session_state:
-    st.success(f"로그인됨: {(nickname or '카카오 사용자')}")
+    st.success(f"{(nickname or '카카오 사용자')}님, 로그인 상태입니다. 복원 작업이 히스토리에 저장됩니다.")
 else:
-    st.info("카카오 로그인을 진행하면 복원 내역이 세션에 보존됩니다.")
+    st.info("카카오 로그인 시 복원 내역이 세션에 보존되며, 게스트 모드에서도 체험해볼 수 있습니다.")
 
 restoration_state = ensure_restoration_state()
 
