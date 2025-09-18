@@ -427,10 +427,8 @@ def render_hero_section(auth_url: str, is_logged_in: bool) -> None:
     (function(){
         var guardKey = 'heroCompareInit';
         if (window[guardKey]) {
-            return;
-        }
+            return;}
         window[guardKey] = true;
-
         function applyCompare(container){
             if (!container || container.dataset.bound === '1') {
                 return;
@@ -526,7 +524,8 @@ def render_hero_section(auth_url: str, is_logged_in: bool) -> None:
                 <span class='hero-label before'>Before</span>
                 <span class='hero-label after'>After</span>
             <input type='range' min='0' max='100' value='48' class='compare-slider' aria-label='Before After slider'/>
-        </div>
+            </div>
+            {compare_script}
         </div>
     </section>
     """
