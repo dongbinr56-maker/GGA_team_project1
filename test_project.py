@@ -380,7 +380,6 @@ else:
 nav_parts.append("</div></div>")
 st.markdown("\n".join(nav_parts), unsafe_allow_html=True)
 
-
 # ------------------------------[ 3-1) 히어로 섹션 ]----------------------------
 @st.cache_data(show_spinner=False)
 def load_demo_compare_images() -> Dict[str, Optional[str]]:
@@ -393,16 +392,35 @@ def load_demo_compare_images() -> Dict[str, Optional[str]]:
             return None
         return base64.b64encode(path.read_bytes()).decode("utf-8")
 
+    before_path = base_dir / "before.png"
+    after_path = base_dir / "after.png"
+
+    before_encoded = _read(before_path)
+    after_encoded = _read(after_path)
+
     return {
-        "before": _read(base_dir / "before.png"),
-        "after": _read(base_dir / "after.png"),
+        "before": before_encoded,
+        "after": after_encoded,
+        str(before_path): before_encoded,
+        str(after_path): after_encoded,
     }
 
 
 def render_hero_section(auth_url: str, is_logged_in: bool) -> None:
     images = load_demo_compare_images()
-    before_b64 = images.get("GGA_team_project1/before.png")
-    after_b64 = images.get("GGA_team_project1/after.png")
+
+    base_dir = Path(__file__).resolve().parent
+
+    before_b64 = (
+        images.get("before")
+        or images.get("before.png")
+        or images.get(str(base_dir / "before.png"))
+    )
+    after_b64 = (
+        images.get("after")
+        or images.get("after.png")
+        or images.get(str(base_dir / "after.png"))
+    )
 
     if before_b64 and after_b64:
         compare_html = f"""
@@ -443,18 +461,22 @@ def render_hero_section(auth_url: str, is_logged_in: bool) -> None:
             <small class='cta-caption'>{caption}</small>
         </div>
         <div class='hero-visual'>
-            {compare_html}
+            <div class='hero-compare'>
+                <img src='data:image/png;base64,{before_b64}' alt='복원 전' class='hero-img before'/>
+                <img src='data:image/png;base64,{after_b64}' alt='복원 후' class='hero-img after'/>
+                <span class='hero-label before'>Before</span>
+                <span class='hero-label after'>After</span>
+            </div>
         </div>
     </section>
     """
+    #/ *{compare_html} * /
 
     st.markdown(hero_html, unsafe_allow_html=True)
 
 
 # 히어로 섹션 렌더링
 render_hero_section(auth_url, "kakao_token" in st.session_state)
-
-
 # ------------------------------[ 4) 복원 유틸 함수 ]---------------------------
 def ensure_restoration_state() -> Dict:
     if "restoration" not in st.session_state:
