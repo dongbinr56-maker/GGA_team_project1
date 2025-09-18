@@ -517,7 +517,15 @@ def render_hero_section(auth_url: str, is_logged_in: bool) -> None:
             <small class='cta-caption'>{caption}</small>
         </div>
         <div class='hero-visual'>
-            {compare_html}
+            <div class='hero-compare compare-ready' data-start='48'>
+                <img src='data:image/png;base64,{before_b64}' alt='복원 전' class='hero-img before'/>
+                <img src='data:image/png;base64,{after_b64}' alt='복원 후' class='hero-img after'/>
+                <div class='hero-divider'></div>
+                <span class='hero-label before'>Before</span>
+                <span class='hero-label after'>After</span>
+            <input type='range' min='0' max='100' value='48' class='compare-slider' aria-label='Before After slider'/>
+            </div>
+            {compare_script}
         </div>
     </section>
     """
