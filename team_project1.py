@@ -422,14 +422,72 @@ def render_hero_section(auth_url: str, is_logged_in: bool) -> None:
         or images.get(str(base_dir / "after.png"))
     )
 
+    compare_script = """
+    <script>
+    (function(){
+        var guardKey = 'heroCompareInit';
+        if (window[guardKey]) {
+            return;
+        }
+        window[guardKey] = true;
+
+        function applyCompare(container){
+            if (!container || container.dataset.bound === '1') {
+                return;
+            }
+            container.dataset.bound = '1';
+
+            var slider = container.querySelector('.compare-slider');
+            var afterImg = container.querySelector('.hero-img.after');
+            var divider = container.querySelector('.hero-divider');
+            if (!slider || !afterImg) {
+                return;
+            }
+
+            function setValue(value){
+                var numeric = Math.min(100, Math.max(0, Number(value)));
+                afterImg.style.clipPath = 'inset(0 0 0 ' + (100 - numeric) + '%)';
+                if (divider) {
+                    divider.style.left = numeric + '%';
+                }
+            }
+
+            var start = container.dataset.start || slider.value || 50;
+            slider.value = start;
+            setValue(start);
+
+            slider.addEventListener('input', function(evt){
+                setValue(evt.target.value);
+            });
+        }
+
+        function init(){
+            document.querySelectorAll('.hero-compare.compare-ready').forEach(applyCompare);
+        }
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', init);
+        } else {
+            init();
+        }
+
+        var observer = new MutationObserver(function(){ init(); });
+        observer.observe(document.body, { childList: true, subtree: true });
+    })();
+    </script>
+    """
+
     if before_b64 and after_b64:
         compare_html = f"""
-        <div class='hero-compare'>
+        <div class='hero-compare compare-ready' data-start='48'>
             <img src='data:image/png;base64,{before_b64}' alt='복원 전' class='hero-img before'/>
             <img src='data:image/png;base64,{after_b64}' alt='복원 후' class='hero-img after'/>
+            <div class='hero-divider'></div>
             <span class='hero-label before'>Before</span>
             <span class='hero-label after'>After</span>
+            <input type='range' min='0' max='100' value='48' class='compare-slider' aria-label='Before After slider'/>
         </div>
+        {compare_script}
         """
     else:
         compare_html = """
@@ -461,16 +519,17 @@ def render_hero_section(auth_url: str, is_logged_in: bool) -> None:
             <small class='cta-caption'>{caption}</small>
         </div>
         <div class='hero-visual'>
-            <div class='hero-compare'>
+            <div class='hero-compare compare-ready' data-start='48'>
                 <img src='data:image/png;base64,{before_b64}' alt='복원 전' class='hero-img before'/>
                 <img src='data:image/png;base64,{after_b64}' alt='복원 후' class='hero-img after'/>
+                <div class='hero-divider'></div>
                 <span class='hero-label before'>Before</span>
                 <span class='hero-label after'>After</span>
-            </div>
+            <input type='range' min='0' max='100' value='48' class='compare-slider' aria-label='Before After slider'/>
+        </div>
         </div>
     </section>
     """
-    #/ *{compare_html} * /
 
     st.markdown(hero_html, unsafe_allow_html=True)
 
