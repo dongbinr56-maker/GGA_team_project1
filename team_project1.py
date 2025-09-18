@@ -185,40 +185,7 @@ if not st.session_state.kakao_logged_in and not st.session_state.skip_login:
             unsafe_allow_html=True
         )
         st.markdown('</div>', unsafe_allow_html=True)
-        
-        #st.markdown('</p></div></div>', unsafe_allow_html=True)
 
-        # 업로드 박스 느낌으로 감싸기
-        #st.markdown(
-        #    """
-        #    <div style="
-        #        border:2px dashed #ccc;
-        #        border-radius:20px;
-        #        padding:20px;
-        #        text-align:center;
-        #        margin:16px 0;
-        #        background:#fff;
-        #    ">
-        #        <p style="font-size:15px; color:#555; margin-bottom:8px;">이미지를 여기로 끌어다 놓으세요</p>
-        #    </div>
-        #    """,
-        #    unsafe_allow_html=True
-        #)
-        #<div style = "border:2px dashed #ccc; border - radius : 20 px;padding : 20 px;text - align: center;margin : 16 px 0;background: #fff;">
-        #<p style="font-size:15px; color:#555; margin-bottom:8px;">이미지를 여기로 끌어다 놓으세요</p>
-        #uploaded_file = st.file_uploader("이미지 업로드", type=["png", "jpg", "jpeg"], label_visibility="collapsed")
-
-#        # 버튼 2개 나란히
-#        col1, col2 = st.columns(2, gap="small")
-#        with col1:
-#            if st.button("카카오 계정 연동"):
-#                st.session_state.kakao_logged_in = True
-#                st.session_state.history.append("📌 복원 작업 #1")
-#                st.rerun()
-#        with col2:
-#            if st.button("계정 연동 없이 이용하기"):
-#                st.session_state.skip_login = True
-#                st.rerun()
 
     st.markdown('</div>', unsafe_allow_html=True)
 
