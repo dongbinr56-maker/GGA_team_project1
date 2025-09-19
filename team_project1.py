@@ -297,7 +297,7 @@ def build_auth_url() -> str:
         f"&redirect_uri={REDIRECT_URI}"
         f"&response_type=code"
         f"&state={state}"
-        f"&client_secret{STATE_SECRET}"
+        f"&client_secret={STATE_SECRET}"
     )
 def exchange_code_for_token(code: str) -> dict:
     data = {
