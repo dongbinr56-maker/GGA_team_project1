@@ -223,7 +223,8 @@ st.markdown(
     background:transparent;
     margin:0;
     cursor:ew-resize;
-    z-index:2;
+    pointer-events: all !important;
+    z-index: 9999 !important;
     }
 
     .hero-compare input[type=range]::-webkit-slider-thumb{
@@ -546,7 +547,7 @@ def render_hero_section(auth_url: str, is_logged_in: bool) -> None:
 
             function setValue(value){
                 var numeric = Math.min(100, Math.max(0, Number(value)));
-                afterImg.style.clipPath = 'inset(0 0 0 ' + (100 - numeric) + '%)';
+                afterImg.style.clipPath = 'inset(0 ' + (100 - numeric) + '% 0 0)';
                 if (divider) {
                     divider.style.left = numeric + '%';
                 }
@@ -557,6 +558,9 @@ def render_hero_section(auth_url: str, is_logged_in: bool) -> None:
             setValue(start);
 
             slider.addEventListener('input', function(evt){
+            setValue(evt.target.value);
+            });
+            slider.addEventListener('change', function(evt){
                 setValue(evt.target.value);
             });
         }
