@@ -1,18 +1,3 @@
-# -*- coding: utf-8 -*-
-"""
-[핵심 수정 요약]
-1) compare_html이 st.markdown에서 JS가 막히던 문제 → components.html()로 렌더.
-2) 핑크 팔레트/히어로 그리드/타이포 그대로 유지. 기능만 추가.
-3) 오른쪽 히어로 비주얼 영역에 Before/After 비교:
-   - 슬라이더로 분할선 이동
-   - 이미지 위 드래그로도 분할선 이동
-   - 이미지 못 찾으면 친절한 플레이스홀더 문구
-
-※ 사용법
-- 같은 폴더에 before.png / after.png 두 장 두기(파일명 고정).
-- streamlit run team_project1_pinksafe.py
-"""
-
 import base64
 import io
 import os
@@ -26,10 +11,8 @@ from typing import Dict, Optional
 
 import requests
 import streamlit as st
-import streamlit.components.v1 as components  # ✅ JS가 필요한 블럭은 이걸로 렌더
 from PIL import Image, ImageFilter, ImageOps
 import textwrap
-
 # ============================================================
 # Kakao OAuth for Streamlit (No-session CSRF using HMAC state)
 # - 우상단 고정 네비바(화이트, 라운드, 그림자)
@@ -38,181 +21,259 @@ import textwrap
 # - 로그인 후: "로그아웃" + 원형 프로필 아바타
 # - CSRF state: 세션에 안 저장. HMAC 서명 토큰으로 검증 → 세션 갈려도 OK.
 # ============================================================
-
 # ------------------------------[ 0) 페이지/레이아웃 ]---------------------------
 st.set_page_config(layout="wide", initial_sidebar_state="collapsed")
 st.markdown(
     """
 <style>
  [data-testid="stSidebar"]{ display:none !important; }
- [data-testid="collapsedControl"]{ display:none !important; }
+    [data-testid="collapsedControl"]{ display:none !important; }
+    .navbar {
+    position: fixed;
+    top: 0; left: 0; right: 0;
+    height: 60px;
+    padding: 0 18px;
+    background: #ffffff;
+    display: flex; align-items: center; justify-content: flex-end;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+    z-index: 1000;
+    }
+    .block-container { padding-top: 78px; }
+    .kakao-btn{
+    display:inline-flex; align-items:center; gap:8px;
+    padding:10px 14px; background:#FEE500; color:#000 !important;
+    border:1px solid rgba(0,0,0,.08); border-radius:10px;
+    font-weight:700; text-decoration:none !important;
+    box-shadow:0 1px 2px rgba(0,0,0,.08); cursor:pointer;
+    }
+    .kakao-btn:hover{ filter:brightness(0.96); }
+    .logout-btn{
+    display:inline-flex; align-items:center;
+    padding:9px 12px; margin-right:8px;
+    background:#fff; color:#222 !important;
+    border:1px solid #E5E7EB; border-radius:10px;
+    font-weight:600; text-decoration:none !important; cursor:pointer;
+    }
+    .logout-btn:hover{ background:#F9FAFB; }
+    .avatar{
+    width:40px; height:40px; border-radius:50%; object-fit:cover;
+    border:1px solid #E5E7EB; box-shadow:0 1px 2px rgba(0,0,0,0.05);
+    }
 
- .navbar {
-   position: fixed; top: 0; left: 0; right: 0; height: 60px; padding: 0 18px;
-   background: #ffffff; display: flex; align-items: center; justify-content: flex-end;
-   box-shadow: 0 2px 6px rgba(0,0,0,0.06); z-index: 1000;
- }
- .block-container { padding-top: 78px; }
+    .nav-right{ display:flex; align-items:center; gap:10px; }
 
- .kakao-btn{
-   display:inline-flex; align-items:center; gap:8px; padding:10px 14px;
-   background:#FEE500; color:#000 !important; border:1px solid rgba(0,0,0,.08); border-radius:10px;
-   font-weight:700; text-decoration:none !important; box-shadow:0 1px 2px rgba(0,0,0,.08); cursor:pointer;
- }
- .kakao-btn:hover{ filter:brightness(0.96); }
+    body{ background:#f8fafc; }
 
- .logout-btn{
-   display:inline-flex; align-items:center; padding:9px 12px; margin-right:8px;
-   background:#fff; color:#222 !important; border:1px solid #E5E7EB; border-radius:10px;
-   font-weight:600; text-decoration:none !important; cursor:pointer;
- }
- .logout-btn:hover{ background:#F9FAFB; }
+    .hero-section{
+    margin-top:32px;
+    padding:32px 36px;
+    border-radius:28px;
+    background:linear-gradient(135deg, rgba(255,240,247,0.9), rgba(236,233,255,0.85));
+    border:1px solid rgba(255,255,255,0.6);
+    box-shadow:0 24px 60px -34px rgba(15,23,42,0.4);
+    display:grid;
+    grid-template-columns:minmax(0,1.1fr) minmax(0,0.9fr);
+    gap:48px;
+    align-items:center;
+    position:relative;
+    overflow:hidden;
+    }
 
- .avatar{
-   width:40px; height:40px; border-radius:50%; object-fit:cover;
-   border:1px solid #E5E7EB; box-shadow:0 1px 2px rgba(0,0,0,0.05);
- }
-
- .nav-right{ display:flex; align-items:center; gap:10px; }
-
- body{ background:#f8fafc; }
-
- /* ====== (중요) 사용자 핑크 팔레트/히어로 영역 그대로 ====== */
- .hero-section{
-   margin-top:32px; padding:32px 36px; border-radius:28px;
-   background:linear-gradient(135deg, rgba(255,240,247,0.9), rgba(236,233,255,0.85));
-   border:1px solid rgba(255,255,255,0.6);
-   box-shadow:0 24px 60px -34px rgba(15,23,42,0.4);
-   display:grid;
-   grid-template-columns:minmax(0,1.1fr) minmax(0,0.9fr);
-   gap:48px; align-items:center; position:relative; overflow:hidden;
- }
- .hero-section::after{
-   content:""; position:absolute; inset:0;
-   background:radial-gradient(circle at 20% -10%, rgba(244,114,182,0.35), transparent 55%),
+    .hero-section::after{
+    content:"";
+    position:absolute;
+    inset:0;
+    background:radial-gradient(circle at 20% -10%, rgba(244,114,182,0.35), transparent 55%),
               radial-gradient(circle at 80% 120%, rgba(129,140,248,0.35), transparent 60%);
-   z-index:0;
- }
+    z-index:0;
+    }
 
- .hero-text, .hero-visual{ position:relative; z-index:1; }
+    .hero-text, .hero-visual{ position:relative; z-index:1; }
 
- .hero-badge{
-   display:inline-flex; align-items:center; gap:6px; padding:6px 14px;
-   border-radius:999px; background:rgba(255,255,255,0.85); color:#ec4899;
-   font-size:0.82rem; font-weight:600; letter-spacing:0.04em; text-transform:uppercase;
-   box-shadow:0 8px 20px -12px rgba(236,72,153,0.8); margin-bottom:18px;
- }
+    .hero-badge{
+    display:inline-flex;
+    align-items:center;
+    gap:6px;
+    padding:6px 14px;
+    border-radius:999px;
+    background:rgba(255,255,255,0.85);
+    color:#ec4899;
+    font-size:0.82rem;
+    font-weight:600;
+    letter-spacing:0.04em;
+    text-transform:uppercase;
+    box-shadow:0 8px 20px -12px rgba(236,72,153,0.8);
+    margin-bottom:18px;
+    }
 
- .hero-title{
-   font-size:2.8rem; font-weight:800; line-height:1.2; color:#111827; margin-bottom:18px;
- }
- .hero-title span{ color:#ec4899; }
+    .hero-title{
+    font-size:2.8rem;
+    font-weight:800;
+    line-height:1.2;
+    color:#111827;
+    margin-bottom:18px;
+    }
 
- .hero-subtext{
-   font-size:1.05rem; color:#4b5563; line-height:1.7; margin-bottom:28px; max-width:520px;
- }
+    .hero-title span{ color:#ec4899; }
 
- .hero-buttons{ display:flex; flex-wrap:wrap; gap:14px; align-items:center; }
- .hero-buttons a{
-   display:inline-flex; align-items:center; justify-content:center; gap:8px;
-   padding:14px 22px; border-radius:999px; font-weight:700; text-decoration:none !important;
-   transition:transform 0.25s ease, box-shadow 0.25s ease;
-   box-shadow:0 10px 30px -15px rgba(236,72,153,0.75);
- }
+    .hero-subtext{
+    font-size:1.05rem;
+    color:#4b5563;
+    line-height:1.7;
+    margin-bottom:28px;
+    max-width:520px;
+    }
 
- .cta-primary{
-   background:linear-gradient(120deg, #ec4899, #fb7185);
-   color:#fff !important;
- }
- .cta-primary:hover{ transform:translateY(-2px); box-shadow:0 20px 35px -20px rgba(236,72,153,0.9); }
+    .hero-buttons{ display:flex; flex-wrap:wrap; gap:14px; align-items:center; }
 
- .cta-secondary{
-   background:rgba(255,255,255,0.9); color:#ec4899 !important;
-   border:1px solid rgba(236,72,153,0.3);
-   box-shadow:0 12px 24px -18px rgba(236,72,153,0.5);
- }
- .cta-secondary:hover{ transform:translateY(-2px); }
- .cta-caption{ display:block; margin-top:10px; color:#6b7280; font-size:0.9rem; }
+    .hero-buttons a{
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    gap:8px;
+    padding:14px 22px;
+    border-radius:999px;
+    font-weight:700;
+    text-decoration:none !important;
+    transition:transform 0.25s ease, box-shadow 0.25s ease;
+    box-shadow:0 10px 30px -15px rgba(236,72,153,0.75);
+    }
 
- /* 비교 영역 기본값 (팔레트는 건드리지 않음) */
- .hero-compare{
-   position:relative; width:100%; aspect-ratio:4/3; border-radius:26px; overflow:hidden; background:#111827;
-   box-shadow:0 34px 60px -30px rgba(15,23,42,0.55);
- }
- .hero-compare img{ position:absolute; inset:0; width:100%; height:100%; object-fit:cover; }
- .hero-compare img.after{ clip-path:inset(0 0 0 52%); }
- .hero-compare .hero-divider{
-   position:absolute; top:0; bottom:0; left:52%; width:3px; background:rgba(255,255,255,0.92);
-   box-shadow:0 0 0 1px rgba(15,23,42,0.1);
- }
- .hero-compare .hero-label{
-   position:absolute; top:18px; padding:7px 14px; border-radius:999px; font-size:0.78rem; font-weight:600;
-   letter-spacing:0.05em; text-transform:uppercase;
- }
- .hero-compare .hero-label.before{ left:18px; background:rgba(15,23,42,0.75); color:#f9fafb; }
- .hero-compare .hero-label.after{ right:18px; background:rgba(236,72,153,0.85); color:#fff; }
+    .cta-primary{
+    background:linear-gradient(120deg, #ec4899, #fb7185);
+    color:#fff !important;
+    }
 
- .hero-compare .compare-slider{
-   position:absolute; left:0; right:0; bottom:10px; width:50%; margin:0 auto;
-   appearance:none; height:8px; border-radius:999px; background:rgba(255,255,255,0.65); outline:none; border:none;
- }
- .hero-compare .compare-slider::-webkit-slider-thumb{
-   appearance:none; width:18px; height:18px; border-radius:50%; background:#fff; border:1px solid rgba(0,0,0,.15);
- }
- .hero-compare .compare-slider::-moz-range-thumb{
-   width:18px; height:18px; border-radius:50%; background:#fff; border:1px solid rgba(0,0,0,.15);
- }
+    .cta-primary:hover{ transform:translateY(-2px); box-shadow:0 20px 35px -20px rgba(236,72,153,0.9); }
 
- @media (max-width: 1100px){
-   .hero-section{ grid-template-columns:1fr; padding:26px 24px; }
-   .hero-title{ font-size:2.3rem; }
-   .hero-subtext{ max-width:none; }
- }
- @media (max-width: 640px){
-   .hero-buttons{ flex-direction:column; align-items:flex-start; }
-   .hero-compare{ aspect-ratio:3/4; }
- }
+    .cta-secondary{
+    background:rgba(255,255,255,0.9);
+    color:#ec4899 !important;
+    border:1px solid rgba(236,72,153,0.3);
+    box-shadow:0 12px 24px -18px rgba(236,72,153,0.5);
+    }
 
- .section-title{ font-size:1.85rem; font-weight:800; color:#111827; margin-bottom:10px; }
- .section-lead{ font-size:1rem; color:#4b5563; margin-bottom:26px; }
+    .cta-secondary:hover{ transform:translateY(-2px); }
 
- .stButton button{
-   border-radius:14px; padding:12px 18px; font-weight:700; border:none;
-   background:linear-gradient(120deg, #ec4899, #f97316); color:#fff;
-   box-shadow:0 15px 40px -24px rgba(236,72,153,0.9);
- }
- .stButton button:hover{ filter:brightness(0.98); }
- .stButton button:disabled{ background:#e5e7eb; color:#9ca3af; box-shadow:none; }
- .stRadio > div{ display:flex; gap:16px; }
- .stRadio label{ font-weight:600; color:#374151; }
+    .cta-caption{
+    display:block;
+    margin-top:10px;
+    color:#6b7280;
+    font-size:0.9rem;
+    }
+
+    .hero-compare{
+    position:relative;
+    width:100%;
+    aspect-ratio:4/3;
+    border-radius:26px;
+    overflow:hidden;
+    background:#111827;
+    box-shadow:0 34px 60px -30px rgba(15,23,42,0.55);
+    }
+
+    .hero-compare img{
+    position:absolute;
+    inset:0;
+    width:100%;
+    height:100%;
+    object-fit:cover;
+    }
+
+    .hero-compare img.after{ clip-path:inset(0 0 0 52%); }
+
+    .hero-compare::after{
+    content:"";
+    position:absolute;
+    top:0; bottom:0; left:52%;
+    width:3px;
+    background:rgba(255,255,255,0.92);
+    box-shadow:0 0 0 1px rgba(15,23,42,0.1);
+    }
+
+    .hero-label{
+    position:absolute;
+    top:18px;
+    padding:7px 14px;
+    border-radius:999px;
+    font-size:0.78rem;
+    font-weight:600;
+    letter-spacing:0.05em;
+    text-transform:uppercase;
+    }
+
+    .hero-label.before{ left:18px; background:rgba(15,23,42,0.75); color:#f9fafb; }
+    .hero-label.after{ right:18px; background:rgba(236,72,153,0.85); color:#fff; }
+
+    .section-title{
+    font-size:1.85rem;
+    font-weight:800;
+    color:#111827;
+    margin-bottom:10px;
+    }
+
+    .section-lead{
+    font-size:1rem;
+    color:#4b5563;
+    margin-bottom:26px;
+    }
+
+    .stButton button{
+    border-radius:14px;
+    padding:12px 18px;
+    font-weight:700;
+    border:none;
+    background:linear-gradient(120deg, #ec4899, #f97316);
+    color:#fff;
+    box-shadow:0 15px 40px -24px rgba(236,72,153,0.9);
+    }
+
+    .stButton button:hover{
+    filter:brightness(0.98);
+    }
+
+    .stButton button:disabled{
+    background:#e5e7eb;
+    color:#9ca3af;
+    box-shadow:none;
+    }
+
+    .stRadio > div{ display:flex; gap:16px; }
+    .stRadio label{ font-weight:600; color:#374151; }
+
+    @media (max-width: 1100px){
+    .hero-section{ grid-template-columns:1fr; padding:26px 24px; }
+    .hero-title{ font-size:2.3rem; }
+    .hero-subtext{ max-width:none; }
+    }
+
+    @media (max-width: 640px){
+    .hero-buttons{ flex-direction:column; align-items:flex-start; }
+    .hero-compare{ aspect-ratio:3/4; }
+    }
 </style>
 """,
     unsafe_allow_html=True,
 )
-
 # ------------------------------[ 1) 카카오 OAuth 설정 ]------------------------
-REST_API_KEY = os.getenv("KAKAO_REST_API_KEY")
-REDIRECT_URI = os.getenv("KAKAO_REDIRECT_URI", "http://localhost:8501")
-STATE_SECRET = (
-    os.getenv("KAKAO_STATE_SECRET")
-    or os.getenv("OAUTH_STATE_SECRET")
-    or (REST_API_KEY or "dev-secret")
-)
+REST_API_KEY = os.getenv("KAKAO_REST_API_KEY", "caf4fd09d45864146cb6e75f70c713a1")
+REDIRECT_URI = os.getenv("KAKAO_REDIRECT_URI", "https://hackteam32.streamlit.app")
+STATE_SECRET = os.getenv("KAKAO_STATE_SECRET", "UzdfMyaTkcNsJ2eVnRoKjUIOvWbeAy5E")
+    #or os.getenv("OAUTH_STATE_SECRET")
+    #or (REST_API_KEY or "dev-secret")
+
 AUTHORIZE_URL = "https://kauth.kakao.com/oauth/authorize"
 TOKEN_URL = "https://kauth.kakao.com/oauth/token"
 USERME_URL = "https://kapi.kakao.com/v2/user/me"
 STATE_TTL_SEC = 5 * 60
-
 def _hmac_sha256(key: str, msg: str) -> str:
     return hmac.new(key.encode(), msg.encode(), hashlib.sha256).hexdigest()
-
 def make_state() -> str:
     ts = str(int(time.time()))
     nonce = secrets.token_urlsafe(8)
     raw = f"{ts}.{nonce}"
     sig = _hmac_sha256(STATE_SECRET, raw)
     return f"{raw}.{sig}"
-
 def verify_state(state: str) -> bool:
     if not state or state.count(".") != 2:
         return False
@@ -227,7 +288,6 @@ def verify_state(state: str) -> bool:
     if time.time() - ts_i > STATE_TTL_SEC:
         return False
     return True
-
 def build_auth_url() -> str:
     state = make_state()
     return (
@@ -237,18 +297,17 @@ def build_auth_url() -> str:
         f"&response_type=code"
         f"&state={state}"
     )
-
 def exchange_code_for_token(code: str) -> dict:
     data = {
         "grant_type": "authorization_code",
         "client_id": REST_API_KEY,
         "redirect_uri": REDIRECT_URI,
         "code": code,
+        "client_secret":STATE_SECRET
     }
     response = requests.post(TOKEN_URL, data=data, timeout=10)
     response.raise_for_status()
     return response.json()
-
 def get_user_profile(access_token: str) -> dict:
     response = requests.get(
         USERME_URL,
@@ -257,7 +316,6 @@ def get_user_profile(access_token: str) -> dict:
     )
     response.raise_for_status()
     return response.json()
-
 def extract_profile(user_me: dict):
     account = (user_me or {}).get("kakao_account", {}) or {}
     profile = account.get("profile", {}) or {}
@@ -268,7 +326,6 @@ def extract_profile(user_me: dict):
         nickname = nickname or props.get("nickname")
         img = img or props.get("profile_image") or props.get("thumbnail_image")
     return nickname, img
-
 # ------------------------------[ 2) 콜백/로그아웃 처리 ]------------------------
 _query_params = (
     st.query_params if hasattr(st, "query_params") else st.experimental_get_query_params()
@@ -276,7 +333,6 @@ _query_params = (
 def _first_param(name: str):
     value = _query_params.get(name)
     return value[0] if isinstance(value, list) and value else value
-
 if _first_param("logout") == "1":
     st.session_state.pop("kakao_token", None)
     st.session_state.pop("kakao_profile", None)
@@ -285,12 +341,10 @@ if _first_param("logout") == "1":
     else:
         st.experimental_set_query_params()
     st.rerun()
-
 error = _first_param("error")
 error_description = _first_param("error_description")
 code = _first_param("code")
 state = _first_param("state")
-
 if error:
     st.error(f"카카오 인증 에러: {error}\n{error_description or ''}")
 elif code:
@@ -301,6 +355,20 @@ elif code:
             token_json = exchange_code_for_token(code)
             st.session_state.kakao_token = token_json
             st.session_state.kakao_profile = get_user_profile(token_json["access_token"])
+
+            # === 팝업 창이면 토큰을 부모창으로 전달 ===
+            st.markdown(f"""
+                <script>
+                  if (window.opener) {{
+                    window.opener.postMessage({{"kakao_token": "{token_json['access_token']}" }}, "*");
+                    window.close();
+                  }} else {{
+                    // fallback: 그냥 현재창 리다이렉트
+                    window.location.href = "/";
+                  }}
+                </script>
+                """, unsafe_allow_html=True)
+
             if hasattr(st, "query_params"):
                 st.query_params.clear()
             else:
@@ -309,15 +377,27 @@ elif code:
         except requests.HTTPError as exc:
             st.exception(exc)
 
+import streamlit.components.v1 as components
+
+components.html("""
+<script>
+window.addEventListener("message", (event) => {
+    if (event.data.kakao_token) {
+        // 토큰 받으면 쿼리파라미터로 붙여서 새로고침
+        window.location.href = "/?token=" + event.data.kakao_token;
+    }
+});
+</script>
+""", height=0)
+
 # ------------------------------[ 3) 우상단 네비바 ]-----------------------------
 auth_url = build_auth_url()
 nickname, img_url = None, None
 if "kakao_profile" in st.session_state:
     nickname, img_url = extract_profile(st.session_state["kakao_profile"])
-
 nav_parts = ["<div class='navbar'><div class='nav-right'>"]
 if "kakao_token" not in st.session_state:
-    nav_parts.append(f"<a class='kakao-btn' href='{auth_url}'>카카오 로그인</a>")
+    nav_parts.append(f"<a class='kakao-btn' href='{auth_url}' target='_blank'>카카오 로그인</a>")
 else:
     nav_parts.append("<a class='logout-btn' href='?logout=1'>로그아웃</a>")
     if img_url:
@@ -328,27 +408,35 @@ else:
 nav_parts.append("</div></div>")
 st.markdown("\n".join(nav_parts), unsafe_allow_html=True)
 
-# ------------------------------[ 3-1) 히어로 섹션 이미지 로드 ]-----------------
+# ------------------------------[ 3-1) 히어로 섹션 ]----------------------------
 @st.cache_data(show_spinner=False)
 def load_demo_compare_images() -> Dict[str, Optional[str]]:
-    """히어로 미리보기용 before/after 이미지를 base64로 로드."""
+    """Load demo before/after images as base64 strings for the hero preview."""
+
     base_dir = Path(__file__).resolve().parent
+
     def _read(path: Path) -> Optional[str]:
         if not path.exists():
             return None
         return base64.b64encode(path.read_bytes()).decode("utf-8")
+
     before_path = base_dir / "before.png"
-    after_path  = base_dir / "after.png"
+    after_path = base_dir / "after.png"
+
+    before_encoded = _read(before_path)
+    after_encoded = _read(after_path)
+
     return {
-        "before": _read(before_path),
-        "after": _read(after_path),
-        str(before_path): _read(before_path),
-        str(after_path): _read(after_path),
+        "before": before_encoded,
+        "after": after_encoded,
+        str(before_path): before_encoded,
+        str(after_path): after_encoded,
     }
 
-# ------------------------------[ 3-2) 히어로 섹션 (JS는 컴포넌트로 렌더) ]--------
+
 def render_hero_section(auth_url: str, is_logged_in: bool) -> None:
     images = load_demo_compare_images()
+
     base_dir = Path(__file__).resolve().parent
 
     before_b64 = (
@@ -362,93 +450,118 @@ def render_hero_section(auth_url: str, is_logged_in: bool) -> None:
         or images.get(str(base_dir / "after.png"))
     )
 
+    compare_script = """
+    <script>
+    (function(){
+        var guardKey = 'heroCompareInit';
+        if (window[guardKey]) {
+            return;}
+        window[guardKey] = true;
+        function applyCompare(container){
+            if (!container || container.dataset.bound === '1') {
+                return;
+            }
+            container.dataset.bound = '1';
+
+            var slider = container.querySelector('.compare-slider');
+            var afterImg = container.querySelector('.hero-img.after');
+            var divider = container.querySelector('.hero-divider');
+            if (!slider || !afterImg) {
+                return;
+            }
+
+            function setValue(value){
+                var numeric = Math.min(100, Math.max(0, Number(value)));
+                afterImg.style.clipPath = 'inset(0 0 0 ' + (100 - numeric) + '%)';
+                if (divider) {
+                    divider.style.left = numeric + '%';
+                }
+            }
+
+            var start = container.dataset.start || slider.value || 50;
+            slider.value = start;
+            setValue(start);
+
+            slider.addEventListener('input', function(evt){
+                setValue(evt.target.value);
+            });
+        }
+
+        function init(){
+            document.querySelectorAll('.hero-compare.compare-ready').forEach(applyCompare);
+        }
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', init);
+        } else {
+            init();
+        }
+
+        var observer = new MutationObserver(function(){ init(); });
+        observer.observe(document.body, { childList: true, subtree: true });
+    })();
+    </script>
+    """
+
+    if before_b64 and after_b64:
+        compare_html = f"""
+        <div class='hero-compare compare-ready' data-start='48'>
+            <img src='data:image/png;base64,{before_b64}' alt='복원 전' class='hero-img before'/>
+            <img src='data:image/png;base64,{after_b64}' alt='복원 후' class='hero-img after'/>
+            <div class='hero-divider'></div>
+            <span class='hero-label before'>Before</span>
+            <span class='hero-label after'>After</span>
+            <input type='range' min='0' max='100' value='48' class='compare-slider' aria-label='Before After slider'/>
+        </div>
+        {compare_script}
+        """
+    else:
+        compare_html = """
+        <div class='hero-compare' style='display:flex;align-items:center;justify-content:center;background:#f1f5f9;'>
+            <span style='color:#94a3b8;font-weight:600;'>샘플 이미지를 불러오지 못했습니다.</span>
+        </div>
+        """
+
     primary_label = "복원 작업 시작하기" if is_logged_in else "카카오 계정으로 계속"
-    primary_href  = "#restore-app" if is_logged_in else auth_url
+    primary_href = "#restore-app" if is_logged_in else auth_url
     caption = (
         "로그인 상태입니다. 바로 복원을 시작해보세요."
         if is_logged_in
         else "카카오 로그인 시 복원 기록이 세션에 보존됩니다."
     )
 
-    # 비교 영역 마크업 (이미지 없으면 플레이스홀더)
-    if before_b64 and after_b64:
-        compare_block = f"""
-        <div class='hero-compare' id='cmp-hero'>
-          <img src='data:image/png;base64,{before_b64}' alt='복원 전' class='hero-img before'/>
-          <img src='data:image/png;base64,{after_b64}'  alt='복원 후' class='hero-img after'/>
-          <div class='hero-divider'></div>
-          <span class='hero-label before'>Before</span>
-          <span class='hero-label after'>After</span>
-          <input type='range' min='0' max='100' value='48' class='compare-slider' aria-label='Before After slider'/>
-        </div>
-        """
-    else:
-        compare_block = """
-        <div class='hero-compare' style='display:flex;align-items:center;justify-content:center;background:#f1f5f9;'>
-          <span style='color:#94a3b8;font-weight:600;'>샘플 이미지를 불러오지 못했습니다.</span>
-        </div>
-        """
-
-    # 히어로 전체를 components.html로 렌더 → JS가 확실히 실행됨
     hero_html = f"""
-<section class='hero-section'>
-  <div class='hero-text'>
-    <div class='hero-badge'>AI Photo Revival</div>
-    <h1 class='hero-title'>오래된 사진 복원 : <span>AI로 온라인 사진 복원</span></h1>
-    <p class='hero-subtext'>흑백의 시간을 되살리고, 선명한 디테일까지 복원하는 프리미엄 AI 파이프라인. 업로드만 하면 자동 색보정, 노이즈 제거, 해상도 업스케일까지 한 번에 경험할 수 있습니다.</p>
-    <div class='hero-buttons'>
-      <a class='cta-primary' href='{primary_href}'>{primary_label}</a>
-      <a class='cta-secondary' href='#restore-app'>게스트 모드로 먼저 체험하기</a>
-    </div>
-    <small class='cta-caption'>{caption}</small>
-  </div>
-  <div class='hero-visual'>
-    {compare_block}
-  </div>
-</section>
+    <section class='hero-section'>
+        <div class='hero-text'>
+            <div class='hero-badge'>AI Photo Revival</div>
+            <h1 class='hero-title'>오래된 사진 복원 : <span>AI로 온라인 사진 복원</span></h1>
+            <p class='hero-subtext'>흑백의 시간을 되살리고, 선명한 디테일까지 복원하는 프리미엄 AI 파이프라인. 업로드만 하면 자동 색보정, 노이즈 제거, 해상도 업스케일까지 한 번에 경험할 수 있습니다.</p>
+            <div class='hero-buttons'>
+                <a class='cta-primary' href='{primary_href}'>
+                    {primary_label}
+                </a>
+                <a class='cta-secondary' href='#restore-app'>게스트 모드로 먼저 체험하기</a>
+            </div>
+            <small class='cta-caption'>{caption}</small>
+        </div>
+        <div class='hero-visual'>
+            <div class='hero-compare compare-ready' data-start='48'>
+                <img src='data:image/png;base64,{before_b64}' alt='복원 전' class='hero-img before'/>
+                <img src='data:image/png;base64,{after_b64}' alt='복원 후' class='hero-img after'/>
+                <div class='hero-divider'></div>
+                <span class='hero-label before'>Before</span>
+                <span class='hero-label after'>After</span>
+            <input type='range' min='0' max='100' value='48' class='compare-slider' aria-label='Before After slider'/>
+            </div>
+        </div>
+    </section>
+    """
 
-<script>
-(function(){{
-  const root = document.getElementById('cmp-hero');
-  if(!root || root.dataset.bound==='1') return;
-  root.dataset.bound='1';
+    st.markdown(hero_html, unsafe_allow_html=True)
 
-  const after   = root.querySelector('img.after');
-  const divider = root.querySelector('.hero-divider');
-  const slider  = root.querySelector('.compare-slider');
-
-  function setSplit(pct){{
-    pct = Math.max(0, Math.min(100, Number(pct)));
-    after.style.clipPath = 'inset(0 0 0 ' + (100-pct) + '%)';
-    divider.style.left = pct + '%';
-    slider.value = pct;
-  }}
-
-  // 초기값 적용
-  setSplit(slider.value);
-
-  // 슬라이더로 조절
-  slider.addEventListener('input', (e)=> setSplit(e.target.value));
-
-  // 이미지 위 드래그로도 조절
-  let dragging = false;
-  function pointerToPct(evt){{
-    const rect = root.getBoundingClientRect();
-    const x = (evt.clientX - rect.left) / rect.width * 100;
-    setSplit(x);
-  }}
-  root.addEventListener('pointerdown', (e)=>{{ dragging = true; pointerToPct(e); }});
-  window.addEventListener('pointermove', (e)=>{{ if(dragging) pointerToPct(e); }});
-  window.addEventListener('pointerup',   ()=>{{ dragging = false; }});
-  window.addEventListener('pointercancel',()=>{{ dragging = false; }});
-}})();
-</script>
-"""
-    components.html(hero_html, height=640, scrolling=False)
 
 # 히어로 섹션 렌더링
 render_hero_section(auth_url, "kakao_token" in st.session_state)
-
 # ------------------------------[ 4) 복원 유틸 함수 ]---------------------------
 def ensure_restoration_state() -> Dict:
     if "restoration" not in st.session_state:
@@ -463,37 +576,30 @@ def ensure_restoration_state() -> Dict:
             "story": None,
         }
     return st.session_state.restoration
-
 def image_from_bytes(data: bytes) -> Image.Image:
     image = Image.open(io.BytesIO(data))
     image = ImageOps.exif_transpose(image)
     return image.convert("RGB")
-
 def image_to_bytes(image: Image.Image) -> bytes:
     buffer = io.BytesIO()
     image.save(buffer, format="PNG")
     return buffer.getvalue()
-
 def colorize_image(image: Image.Image) -> Image.Image:
     gray = image.convert("L")
     colorized = ImageOps.colorize(gray, black="#1e1e1e", white="#f8efe3", mid="#88a6c6")
     return colorized.convert("RGB")
-
 def upscale_image(image: Image.Image) -> Image.Image:
     width, height = image.size
     factor = 2
     return image.resize((width * factor, height * factor), Image.LANCZOS)
-
 def denoise_image(image: Image.Image) -> Image.Image:
     smoothed = image.filter(ImageFilter.MedianFilter(size=3))
     return smoothed.filter(ImageFilter.SMOOTH_MORE)
-
 def format_status(counts: Dict[str, int]) -> str:
     return (
         f"[컬러화 {'✔' if counts['color'] else '✖'} / "
         f"해상도 {counts['upscale']}회 / 노이즈 {counts['denoise']}회]"
     )
-
 def add_history_entry(label: str, image_bytes: bytes, note: Optional[str] = None):
     restoration = ensure_restoration_state()
     entry = {
@@ -505,7 +611,6 @@ def add_history_entry(label: str, image_bytes: bytes, note: Optional[str] = None
     }
     restoration["history"].append(entry)
     restoration["current_bytes"] = image_bytes
-
 def reset_restoration(upload_digest: str, original_bytes: bytes, photo_type: str, description: str):
     restoration = ensure_restoration_state()
     restoration.update(
@@ -520,7 +625,6 @@ def reset_restoration(upload_digest: str, original_bytes: bytes, photo_type: str
             "story": None,
         }
     )
-
 def build_story(description: str, counts: Dict[str, int], photo_type: str) -> str:
     base = description.strip() or "이 사진"
     story_lines = []
@@ -551,7 +655,6 @@ def build_story(description: str, counts: Dict[str, int], photo_type: str) -> st
     story_lines.append(outro)
     wrapped = [textwrap.fill(line, width=46) for line in story_lines]
     return "\n\n".join(wrapped)
-
 def handle_auto_colorization(photo_type: str):
     restoration = ensure_restoration_state()
     if photo_type != "흑백":
@@ -564,14 +667,12 @@ def handle_auto_colorization(photo_type: str):
     bytes_data = image_to_bytes(colorized)
     restoration["story"] = None
     add_history_entry("컬러 복원 (자동)", bytes_data, note="흑백 이미지를 기본 팔레트로 색보정했습니다.")
-
 def can_run_operation(operation: str, allow_repeat: bool) -> bool:
     restoration = ensure_restoration_state()
     count = restoration["counts"].get(operation, 0)
     if allow_repeat:
         return count < 3
     return count == 0
-
 def run_upscale():
     restoration = ensure_restoration_state()
     image = image_from_bytes(restoration["current_bytes"])
@@ -580,7 +681,6 @@ def run_upscale():
     bytes_data = image_to_bytes(upscaled)
     restoration["story"] = None
     add_history_entry("해상도 업", bytes_data, note="ESRGAN 대체 알고리즘(샘플)으로 2배 업스케일했습니다.")
-
 def run_denoise():
     restoration = ensure_restoration_state()
     image = image_from_bytes(restoration["current_bytes"])
@@ -589,7 +689,6 @@ def run_denoise():
     bytes_data = image_to_bytes(denoised)
     restoration["story"] = None
     add_history_entry("노이즈 제거", bytes_data, note="NAFNet 대체 필터(샘플)로 노이즈를 완화했습니다.")
-
 def run_story_generation():
     restoration = ensure_restoration_state()
     text = build_story(restoration["description"], restoration["counts"], restoration["photo_type"])
@@ -599,6 +698,7 @@ def run_story_generation():
         "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         "status": dict(restoration["counts"]),
     }
+
 
 # ------------------------------[ 5) 본문 UI ]----------------------------------
 st.title("📌 사진 복원 + 스토리 생성")
@@ -635,11 +735,9 @@ with st.container():
         else:
             restoration_state["description"] = description
             restoration_state["photo_type"] = photo_type
-
 allow_repeat = st.checkbox("고급 옵션(실험적) - 동일 작업 반복 허용 (최대 3회)")
 if allow_repeat:
     st.warning("⚠ 동일 작업 반복은 처리 시간이 길어지거나 이미지 손상을 유발할 수 있습니다.")
-
 if restoration_state["original_bytes"] is None:
     st.info("사진을 업로드하면 복원 옵션이 활성화됩니다.")
 else:
@@ -660,7 +758,6 @@ else:
         story_clicked = st.button("스토리 생성", use_container_width=True, disabled=not can_story)
         if story_clicked:
             run_story_generation()
-
     st.divider()
     col_original, col_result = st.columns(2)
     with col_original:
@@ -677,7 +774,6 @@ else:
                 st.markdown(f"*{latest['note']}*")
         else:
             st.info("아직 수행된 복원 작업이 없습니다.")
-
     if len(restoration_state["history"]) > 1:
         with st.expander("전체 작업 히스토리"):
             for idx, entry in enumerate(restoration_state["history"], 1):
@@ -687,7 +783,6 @@ else:
                 if entry.get("note"):
                     st.write(entry["note"])
                 st.markdown("---")
-
     if restoration_state.get("story"):
         st.subheader("스토리")
         story_info = restoration_state["story"]
@@ -695,7 +790,6 @@ else:
         st.caption(
             f"생성 시각: {story_info['timestamp']} / {format_status(story_info['status'])}"
         )
-
 st.markdown("---")
 st.caption(
     "*DeOldify, ESRGAN, NAFNet 등의 실제 모델 연동을 위한 자리 표시자로, 현재는 샘플 필터를 사용합니다.*"
