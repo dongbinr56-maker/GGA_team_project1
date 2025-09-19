@@ -762,13 +762,13 @@ else:
     col_original, col_result = st.columns(2)
     with col_original:
         st.subheader("원본 이미지")
-        st.image(restoration_state["original_bytes"], use_column_width=True)
+        st.image(restoration_state["original_bytes"],)
         st.caption(format_status({"color": 0, "upscale": 0, "denoise": 0}))
     with col_result:
         st.subheader("복원 결과")
         if restoration_state["history"]:
             latest = restoration_state["history"][-1]
-            st.image(latest["bytes"], use_column_width=True, caption=latest["label"])
+            st.image(latest["bytes"], caption=latest["label"])
             st.caption(format_status(latest["status"]))
             if latest.get("note"):
                 st.markdown(f"*{latest['note']}*")
@@ -778,7 +778,7 @@ else:
         with st.expander("전체 작업 히스토리"):
             for idx, entry in enumerate(restoration_state["history"], 1):
                 st.markdown(f"**{idx}. {entry['label']}** ({entry['timestamp']})")
-                st.image(entry["bytes"], use_column_width=True)
+                st.image(entry["bytes"])
                 st.caption(format_status(entry["status"]))
                 if entry.get("note"):
                     st.write(entry["note"])
