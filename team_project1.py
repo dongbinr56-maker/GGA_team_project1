@@ -592,7 +592,40 @@ def render_hero_section(auth_url: str, is_logged_in: bool) -> None:
       <input type='range' min='0' max='100' value='48'
              class='compare-slider' aria-label='Before After slider'/>
     </div>
-    {compare_script}  <!-- ✅ 여기서 같이 주입 -->
+    <script>
+    (function(){{
+      var guardKey='heroCompareInit';
+      if (window[guardKey]) return; window[guardKey]=true;
+    
+      function apply(container){{
+        if (!container || container.dataset.bound==='1') return;
+        container.dataset.bound='1';
+        var slider  = container.querySelector('.compare-slider');
+        var afterImg= container.querySelector('.hero-img.after');
+        var divider = container.querySelector('.hero-divider');
+        if (!slider || !afterImg) return;
+    
+        function setValue(v){{
+          var pct   = Math.min(100, Math.max(0, Number(v)));
+          var inset = 'inset(0 0 0 ' + (100 - pct) + '%)';
+          afterImg.style.clipPath      = inset;   // 표준
+          afterImg.style.webkitClipPath= inset;   // 웹킷(Safari 등) 대응
+          if (divider) divider.style.left = pct + '%';
+        }}
+    
+        var start = container.dataset.start || slider.value || 50;
+        slider.value = start; setValue(start);
+    
+        var handler = function(e){{ setValue(e.target.value); }};
+        slider.addEventListener('input', handler);
+        slider.addEventListener('change', handler);
+      }}
+    
+      function init(){{ document.querySelectorAll('.hero-compare.compare-ready').forEach(apply); }}
+      if (document.readyState==='loading') document.addEventListener('DOMContentLoaded', init); else init();
+      new MutationObserver(init).observe(document.body, {{ childList:true, subtree:true }});
+    }})();
+    </script>  <!-- ✅ 여기서 같이 주입 -->
     </section>
     """
 
