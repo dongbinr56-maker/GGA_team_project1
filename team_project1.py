@@ -291,7 +291,7 @@ def verify_state(state: str) -> bool:
 def build_auth_url() -> str:
     state = make_state()
     return (
-        f"{AUTHORIZE_URL}"
+        f"{AUTHORIZE_URL}/grant_type=authorization_code"
         f"?client_id={REST_API_KEY}"
         f"&redirect_uri={REDIRECT_URI}"
         f"&response_type=code"
