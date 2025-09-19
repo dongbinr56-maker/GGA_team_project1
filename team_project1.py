@@ -258,11 +258,10 @@ st.markdown(
 # ------------------------------[ 1) 카카오 OAuth 설정 ]------------------------
 REST_API_KEY = os.getenv("KAKAO_REST_API_KEY")
 REDIRECT_URI = os.getenv("KAKAO_REDIRECT_URI", "https://hackteam32.streamlit.app")
-STATE_SECRET = (
-    os.getenv("KAKAO_STATE_SECRET")
-    or os.getenv("OAUTH_STATE_SECRET")
-    or (REST_API_KEY or "dev-secret")
-)
+STATE_SECRET = os.getenv("KAKAO_STATE_SECRET")
+    #or os.getenv("OAUTH_STATE_SECRET")
+    #or (REST_API_KEY or "dev-secret")
+
 AUTHORIZE_URL = "https://kauth.kakao.com/oauth/authorize"
 TOKEN_URL = "https://kauth.kakao.com/oauth/token"
 USERME_URL = "https://kapi.kakao.com/v2/user/me"
