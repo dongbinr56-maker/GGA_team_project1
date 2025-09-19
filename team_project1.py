@@ -291,12 +291,11 @@ def verify_state(state: str) -> bool:
 def build_auth_url() -> str:
     state = make_state()
     return (
-        f"{AUTHORIZE_URL}/grant_type=authorization_code"
+        f"{AUTHORIZE_URL}"
         f"?client_id={REST_API_KEY}"
         f"&redirect_uri={REDIRECT_URI}"
         f"&response_type=code"
         f"&state={state}"
-        f"&client_secret={STATE_SECRET}"
     )
 def exchange_code_for_token(code: str) -> dict:
     data = {
@@ -304,6 +303,7 @@ def exchange_code_for_token(code: str) -> dict:
         "client_id": REST_API_KEY,
         "redirect_uri": REDIRECT_URI,
         "code": code,
+        "client_secret":STATE_SECRET
     }
     response = requests.post(TOKEN_URL, data=data, timeout=10)
     response.raise_for_status()
