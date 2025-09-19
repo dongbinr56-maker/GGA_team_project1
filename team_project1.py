@@ -257,7 +257,7 @@ st.markdown(
 )
 # ------------------------------[ 1) 카카오 OAuth 설정 ]------------------------
 REST_API_KEY = os.getenv("KAKAO_REST_API_KEY")
-REDIRECT_URI = os.getenv("KAKAO_REDIRECT_URI", "http://localhost:8501")
+REDIRECT_URI = os.getenv("KAKAO_REDIRECT_URI", "https://hackteam32.streamlit.app")
 STATE_SECRET = (
     os.getenv("KAKAO_STATE_SECRET")
     or os.getenv("OAUTH_STATE_SECRET")
