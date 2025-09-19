@@ -13,6 +13,9 @@ import requests
 import streamlit as st
 from PIL import Image, ImageFilter, ImageOps
 import textwrap
+
+import warnings
+warnings.filterwarnings("ignore", category=DeprecationWarning)
 # ============================================================
 # Kakao OAuth for Streamlit (No-session CSRF using HMAC state)
 # - 우상단 고정 네비바(화이트, 라운드, 그림자)
