@@ -68,8 +68,8 @@ st.markdown(
     body{ background:#f8fafc; }
 
     .hero-section{
-    margin-top:32px;
-    margin-bottom:80px;   /* ✅ 추가 */
+    margin-top:60px;
+    margin-bottom:40px;   /* ✅ 추가 */
     padding:32px 36px;
     border-radius:28px;
     background:linear-gradient(135deg, rgba(255,240,247,0.9), rgba(236,233,255,0.85));
@@ -126,6 +126,7 @@ st.markdown(
     line-height:1.7;
     margin-bottom:28px;
     max-width:520px;
+    flex:1 1 240px;
     }
 
     .hero-buttons{ display:flex; flex-wrap:wrap; gap:14px; align-items:center; }
@@ -141,6 +142,7 @@ st.markdown(
     text-decoration:none !important;
     transition:transform 0.25s ease, box-shadow 0.25s ease;
     box-shadow:0 10px 30px -15px rgba(236,72,153,0.75);
+    min-height:52px;
     }
 
     .cta-primary{
@@ -186,13 +188,14 @@ st.markdown(
 
     .hero-compare img.after{ clip-path:inset(0 0 0 52%); }
 
-    .hero-compare::after{
+    .hero-divider{
     content:"";
     position:absolute;
     top:0; bottom:0; left:52%;
     width:3px;
     background:rgba(255,255,255,0.92);
     box-shadow:0 0 0 1px rgba(15,23,42,0.1);
+    pointer-events:none;
     }
 
     .hero-label{
@@ -208,6 +211,39 @@ st.markdown(
 
     .hero-label.before{ left:18px; background:rgba(15,23,42,0.75); color:#f9fafb; }
     .hero-label.after{ right:18px; background:rgba(236,72,153,0.85); color:#fff; }
+
+    .hero-compare input[type=range]{
+    -webkit-appearance:none;
+    appearance:none;
+    position:absolute;
+    inset:0;
+    width:100%;
+    height:100%;
+    background:transparent;
+    margin:0;
+    cursor:ew-resize;
+    z-index:2;
+    }
+
+    .hero-compare input[type=range]::-webkit-slider-thumb{
+    -webkit-appearance:none;
+    appearance:none;
+    width:24px;
+    height:24px;
+    border-radius:50%;
+    background:#ec4899;
+    border:3px solid #fff;
+    box-shadow:0 4px 16px rgba(236,72,153,0.35);
+    }
+
+    .hero-compare input[type=range]::-moz-range-thumb{
+    width:24px;
+    height:24px;
+    border-radius:50%;
+    background:#ec4899;
+    border:3px solid #fff;
+    box-shadow:0 4px 16px rgba(236,72,153,0.35);
+    }
 
     .section-title{
     font-size:1.85rem;
@@ -380,35 +416,28 @@ elif code:
             st.rerun()
         except requests.HTTPError as exc:
             st.exception(exc)
-import streamlit.components.v1 as components
-
-components.html("""
-<script>
-window.addEventListener("message", (event) => {
-    if (event.data.kakao_token) {
-        // 토큰 받으면 쿼리파라미터로 붙여서 새로고침
-        window.location.href = "/?token=" + event.data.kakao_token;
-    }
-});
-</script>
-""", height=0)
 # ------------------------------[ 3) 우상단 네비바 ]-----------------------------
 auth_url = build_auth_url()
 nickname, img_url = None, None
 if "kakao_profile" in st.session_state:
     nickname, img_url = extract_profile(st.session_state["kakao_profile"])
-nav_parts = ["<div class='navbar'><div class='nav-right'>"]
-if "kakao_token" not in st.session_state:
-    nav_parts.append(f"<a class='kakao-btn' href='{auth_url}' target='_blank'>카카오 로그인</a>")
-else:
-    nav_parts.append("<a class='logout-btn' href='?logout=1'>로그아웃</a>")
+nav_content = []
+if "kakao_token" in st.session_state:
+    nav_content.append("<a class='logout-btn' href='?logout=1'>로그아웃</a>")
+
+#nav_parts = ["<div class='navbar'><div class='nav-right'>"]
+#if "kakao_token" not in st.session_state:
+#    nav_parts.append(f"<a class='kakao-btn' href='{auth_url}' target='_blank'>카카오 로그인</a>")
+#else:
+#    nav_parts.append("<a class='logout-btn' href='?logout=1'>로그아웃</a>")
     if img_url:
         safe_nick = (nickname or "").replace("<", "&lt;").replace(">", "&gt;")
-        nav_parts.append(
+        nav_content.append(
             f"<img class='avatar' src='{img_url}' alt='avatar' title='{safe_nick}'/>"
         )
-nav_parts.append("</div></div>")
-st.markdown("\n".join(nav_parts), unsafe_allow_html=True)
+if nav_content:
+    nav_html = "<div class='navbar'><div class='nav-right'>" + "".join(nav_content) + "</div></div>"
+    st.markdown(nav_html, unsafe_allow_html=True)
 
 # ------------------------------[ 3-1) 히어로 섹션 ]----------------------------
 @st.cache_data(show_spinner=False)
@@ -515,7 +544,6 @@ def render_hero_section(auth_url: str, is_logged_in: bool) -> None:
             <span class='hero-label after'>After</span>
             <input type='range' min='0' max='100' value='48' class='compare-slider' aria-label='Before After slider'/>
         </div>
-        {compare_script}
         """
     else:
         compare_html = """
@@ -548,18 +576,20 @@ def render_hero_section(auth_url: str, is_logged_in: bool) -> None:
         </div>
         <div class='hero-visual'>
             <div class='hero-compare compare-ready' data-start='48'>
-                <img src='data:image/png;base64,{before_b64}' alt='복원 전' class='hero-img before'/>
-                <img src='data:image/png;base64,{after_b64}' alt='복원 후' class='hero-img after'/>
-                <div class='hero-divider'></div>
-                <span class='hero-label before'>Before</span>
-                <span class='hero-label after'>After</span>
+            <img src='data:image/png;base64,{before_b64}' alt='복원 전' class='hero-img before'/>
+            <img src='data:image/png;base64,{after_b64}' alt='복원 후' class='hero-img after'/>
+            <div class='hero-divider'></div>
+            <span class='hero-label before'>Before</span>
+            <span class='hero-label after'>After</span>
             <input type='range' min='0' max='100' value='48' class='compare-slider' aria-label='Before After slider'/>
-            </div>
+        </div>
         </div>
     </section>
     """
 
     st.markdown(hero_html, unsafe_allow_html=True)
+    if before_b64 and after_b64:
+        st.markdown(compare_script, unsafe_allow_html=True)
 
 
 # 히어로 섹션 렌더링
