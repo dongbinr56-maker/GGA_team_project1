@@ -15,6 +15,7 @@ from PIL import Image, ImageFilter, ImageOps
 import textwrap
 
 import warnings
+
 warnings.filterwarnings("ignore", category=DeprecationWarning)
 # ============================================================
 # Kakao OAuth for Streamlit (No-session CSRF using HMAC state)
@@ -270,6 +271,7 @@ st.markdown(
 
     .stButton button:hover{
     filter:brightness(0.98);
+
     }
 
     .stButton button:disabled{
@@ -294,7 +296,6 @@ st.markdown(
 </style>
 """, unsafe_allow_html=True)
 
-
 # 123
 st.markdown("""
 <style>
@@ -316,28 +317,31 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-
-
-
 # ------------------------------[ 1) 카카오 OAuth 설정 ]------------------------
 REST_API_KEY = os.getenv("KAKAO_REST_API_KEY", "caf4fd09d45864146cb6e75f70c713a1")
 REDIRECT_URI = os.getenv("KAKAO_REDIRECT_URI", "https://hackteam32.streamlit.app")
 STATE_SECRET = os.getenv("KAKAO_STATE_SECRET", "UzdfMyaTkcNsJ2eVnRoKjUIOvWbeAy5E")
-    #or os.getenv("OAUTH_STATE_SECRET")
-    #or (REST_API_KEY or "dev-secret")
+# or os.getenv("OAUTH_STATE_SECRET")
+# or (REST_API_KEY or "dev-secret")
 
 AUTHORIZE_URL = "https://kauth.kakao.com/oauth/authorize"
 TOKEN_URL = "https://kauth.kakao.com/oauth/token"
 USERME_URL = "https://kapi.kakao.com/v2/user/me"
 STATE_TTL_SEC = 5 * 60
+
+
 def _hmac_sha256(key: str, msg: str) -> str:
     return hmac.new(key.encode(), msg.encode(), hashlib.sha256).hexdigest()
+
+
 def make_state() -> str:
     ts = str(int(time.time()))
     nonce = secrets.token_urlsafe(8)
     raw = f"{ts}.{nonce}"
     sig = _hmac_sha256(STATE_SECRET, raw)
     return f"{raw}.{sig}"
+
+
 def verify_state(state: str) -> bool:
     if not state or state.count(".") != 2:
         return False
@@ -352,6 +356,8 @@ def verify_state(state: str) -> bool:
     if time.time() - ts_i > STATE_TTL_SEC:
         return False
     return True
+
+
 def build_auth_url() -> str:
     state = make_state()
     return (
@@ -361,17 +367,21 @@ def build_auth_url() -> str:
         f"&response_type=code"
         f"&state={state}"
     )
+
+
 def exchange_code_for_token(code: str) -> dict:
     data = {
         "grant_type": "authorization_code",
         "client_id": REST_API_KEY,
         "redirect_uri": REDIRECT_URI,
         "code": code,
-        "client_secret":STATE_SECRET
+        "client_secret": STATE_SECRET
     }
     response = requests.post(TOKEN_URL, data=data, timeout=10)
     response.raise_for_status()
     return response.json()
+
+
 def get_user_profile(access_token: str) -> dict:
     response = requests.get(
         USERME_URL,
@@ -380,6 +390,8 @@ def get_user_profile(access_token: str) -> dict:
     )
     response.raise_for_status()
     return response.json()
+
+
 def extract_profile(user_me: dict):
     account = (user_me or {}).get("kakao_account", {}) or {}
     profile = account.get("profile", {}) or {}
@@ -390,13 +402,19 @@ def extract_profile(user_me: dict):
         nickname = nickname or props.get("nickname")
         img = img or props.get("profile_image") or props.get("thumbnail_image")
     return nickname, img
+
+
 # ------------------------------[ 2) 콜백/로그아웃 처리 ]------------------------
 _query_params = (
     st.query_params if hasattr(st, "query_params") else st.experimental_get_query_params()
 )
+
+
 def _first_param(name: str):
     value = _query_params.get(name)
     return value[0] if isinstance(value, list) and value else value
+
+
 if _first_param("logout") == "1":
     st.session_state.pop("kakao_token", None)
     st.session_state.pop("kakao_profile", None)
@@ -449,11 +467,11 @@ nav_content = []
 if "kakao_token" in st.session_state:
     nav_content.append("<a class='logout-btn' href='?logout=1'>로그아웃</a>")
 
-#nav_parts = ["<div class='navbar'><div class='nav-right'>"]
-#if "kakao_token" not in st.session_state:
-#    nav_parts.append(f"<a class='kakao-btn' href='{auth_url}' target='_blank'>카카오 로그인</a>")
-#else:
-#    nav_parts.append("<a class='logout-btn' href='?logout=1'>로그아웃</a>")
+    # nav_parts = ["<div class='navbar'><div class='nav-right'>"]
+    # if "kakao_token" not in st.session_state:
+    #    nav_parts.append(f"<a class='kakao-btn' href='{auth_url}' target='_blank'>카카오 로그인</a>")
+    # else:
+    #    nav_parts.append("<a class='logout-btn' href='?logout=1'>로그아웃</a>")
     if img_url:
         safe_nick = (nickname or "").replace("<", "&lt;").replace(">", "&gt;")
         nav_content.append(
@@ -462,6 +480,7 @@ if "kakao_token" in st.session_state:
 if nav_content:
     nav_html = "<div class='navbar'><div class='nav-right'>" + "".join(nav_content) + "</div></div>"
     st.markdown(nav_html, unsafe_allow_html=True)
+
 
 # ------------------------------[ 3-1) 히어로 섹션 ]----------------------------
 @st.cache_data(show_spinner=False)
@@ -495,14 +514,14 @@ def render_hero_section(auth_url: str, is_logged_in: bool) -> None:
     base_dir = Path(__file__).resolve().parent
 
     before_b64 = (
-        images.get("before")
-        or images.get("before.png")
-        or images.get(str(base_dir / "before.png"))
+            images.get("before")
+            or images.get("before.png")
+            or images.get(str(base_dir / "before.png"))
     )
     after_b64 = (
-        images.get("after")
-        or images.get("after.png")
-        or images.get(str(base_dir / "after.png"))
+            images.get("after")
+            or images.get("after.png")
+            or images.get(str(base_dir / "after.png"))
     )
 
     compare_script = """
@@ -618,6 +637,8 @@ def render_hero_section(auth_url: str, is_logged_in: bool) -> None:
 
 # 히어로 섹션 렌더링
 render_hero_section(auth_url, "kakao_token" in st.session_state)
+
+
 # ------------------------------[ 4) 복원 유틸 함수 ]---------------------------
 def ensure_restoration_state() -> Dict:
     if "restoration" not in st.session_state:
@@ -632,30 +653,44 @@ def ensure_restoration_state() -> Dict:
             "story": None,
         }
     return st.session_state.restoration
+
+
 def image_from_bytes(data: bytes) -> Image.Image:
     image = Image.open(io.BytesIO(data))
     image = ImageOps.exif_transpose(image)
     return image.convert("RGB")
+
+
 def image_to_bytes(image: Image.Image) -> bytes:
     buffer = io.BytesIO()
     image.save(buffer, format="PNG")
     return buffer.getvalue()
+
+
 def colorize_image(image: Image.Image) -> Image.Image:
     gray = image.convert("L")
     colorized = ImageOps.colorize(gray, black="#1e1e1e", white="#f8efe3", mid="#88a6c6")
     return colorized.convert("RGB")
+
+
 def upscale_image(image: Image.Image) -> Image.Image:
     width, height = image.size
     factor = 2
     return image.resize((width * factor, height * factor), Image.LANCZOS)
+
+
 def denoise_image(image: Image.Image) -> Image.Image:
     smoothed = image.filter(ImageFilter.MedianFilter(size=3))
     return smoothed.filter(ImageFilter.SMOOTH_MORE)
+
+
 def format_status(counts: Dict[str, int]) -> str:
     return (
         f"[컬러화 {'✔' if counts['color'] else '✖'} / "
         f"해상도 {counts['upscale']}회 / 노이즈 {counts['denoise']}회]"
     )
+
+
 def add_history_entry(label: str, image_bytes: bytes, note: Optional[str] = None):
     restoration = ensure_restoration_state()
     entry = {
@@ -667,6 +702,8 @@ def add_history_entry(label: str, image_bytes: bytes, note: Optional[str] = None
     }
     restoration["history"].append(entry)
     restoration["current_bytes"] = image_bytes
+
+
 def reset_restoration(upload_digest: str, original_bytes: bytes, photo_type: str, description: str):
     restoration = ensure_restoration_state()
     restoration.update(
@@ -681,6 +718,8 @@ def reset_restoration(upload_digest: str, original_bytes: bytes, photo_type: str
             "story": None,
         }
     )
+
+
 def build_story(description: str, counts: Dict[str, int], photo_type: str) -> str:
     base = description.strip() or "이 사진"
     story_lines = []
@@ -711,6 +750,8 @@ def build_story(description: str, counts: Dict[str, int], photo_type: str) -> st
     story_lines.append(outro)
     wrapped = [textwrap.fill(line, width=46) for line in story_lines]
     return "\n\n".join(wrapped)
+
+
 def handle_auto_colorization(photo_type: str):
     restoration = ensure_restoration_state()
     if photo_type != "흑백":
@@ -723,12 +764,16 @@ def handle_auto_colorization(photo_type: str):
     bytes_data = image_to_bytes(colorized)
     restoration["story"] = None
     add_history_entry("컬러 복원 (자동)", bytes_data, note="흑백 이미지를 기본 팔레트로 색보정했습니다.")
+
+
 def can_run_operation(operation: str, allow_repeat: bool) -> bool:
     restoration = ensure_restoration_state()
     count = restoration["counts"].get(operation, 0)
     if allow_repeat:
         return count < 3
     return count == 0
+
+
 def run_upscale():
     restoration = ensure_restoration_state()
     image = image_from_bytes(restoration["current_bytes"])
@@ -737,6 +782,8 @@ def run_upscale():
     bytes_data = image_to_bytes(upscaled)
     restoration["story"] = None
     add_history_entry("해상도 업", bytes_data, note="ESRGAN 대체 알고리즘(샘플)으로 2배 업스케일했습니다.")
+
+
 def run_denoise():
     restoration = ensure_restoration_state()
     image = image_from_bytes(restoration["current_bytes"])
@@ -745,6 +792,8 @@ def run_denoise():
     bytes_data = image_to_bytes(denoised)
     restoration["story"] = None
     add_history_entry("노이즈 제거", bytes_data, note="NAFNet 대체 필터(샘플)로 노이즈를 완화했습니다.")
+
+
 def run_story_generation():
     restoration = ensure_restoration_state()
     text = build_story(restoration["description"], restoration["counts"], restoration["photo_type"])
