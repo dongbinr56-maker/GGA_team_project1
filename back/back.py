@@ -13,9 +13,6 @@ import requests
 import streamlit as st
 from PIL import Image, ImageFilter, ImageOps
 import textwrap
-
-import warnings
-warnings.filterwarnings("ignore", category=DeprecationWarning)
 # ============================================================
 # Kakao OAuth for Streamlit (No-session CSRF using HMAC state)
 # - 우상단 고정 네비바(화이트, 라운드, 그림자)
@@ -781,7 +778,7 @@ else:
         with st.expander("전체 작업 히스토리"):
             for idx, entry in enumerate(restoration_state["history"], 1):
                 st.markdown(f"**{idx}. {entry['label']}** ({entry['timestamp']})")
-                st.image(entry["bytes"])
+                st.image(entry["bytes"], use_column_width=True)
                 st.caption(format_status(entry["status"]))
                 if entry.get("note"):
                     st.write(entry["note"])

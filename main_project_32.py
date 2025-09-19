@@ -1,4 +1,3 @@
-
 import base64
 import io
 import os
@@ -12,10 +11,11 @@ from typing import Dict, Optional
 
 import requests
 import streamlit as st
-import streamlit.components.v1 as components  # NEW: to render HTML+JS
 from PIL import Image, ImageFilter, ImageOps
 import textwrap
 
+import warnings
+warnings.filterwarnings("ignore", category=DeprecationWarning)
 # ============================================================
 # Kakao OAuth for Streamlit (No-session CSRF using HMAC state)
 # - 우상단 고정 네비바(화이트, 라운드, 그림자)
@@ -24,7 +24,6 @@ import textwrap
 # - 로그인 후: "로그아웃" + 원형 프로필 아바타
 # - CSRF state: 세션에 안 저장. HMAC 서명 토큰으로 검증 → 세션 갈려도 OK.
 # ============================================================
-
 # ------------------------------[ 0) 페이지/레이아웃 ]---------------------------
 st.set_page_config(layout="wide", initial_sidebar_state="collapsed")
 st.markdown(
@@ -70,11 +69,16 @@ st.markdown(
 
     .hero-section{
     margin-top:32px;
+    margin-bottom:80px;   /* ✅ 추가 */
     padding:32px 36px;
     border-radius:28px;
     background:linear-gradient(135deg, rgba(255,240,247,0.9), rgba(236,233,255,0.85));
     border:1px solid rgba(255,255,255,0.6);
     box-shadow:0 24px 60px -34px rgba(15,23,42,0.4);
+    display:grid;
+    grid-template-columns:minmax(0,1.1fr) minmax(0,0.9fr);
+    gap:48px;
+    align-items:center;
     position:relative;
     overflow:hidden;
     }
@@ -88,7 +92,7 @@ st.markdown(
     z-index:0;
     }
 
-    .hero-text{ position:relative; z-index:1; }
+    .hero-text, .hero-visual{ position:relative; z-index:1; }
 
     .hero-badge{
     display:inline-flex;
@@ -109,7 +113,6 @@ st.markdown(
     .hero-title{
     font-size:2.8rem;
     font-weight:800;
-    
     line-height:1.2;
     color:#111827;
     margin-bottom:18px;
@@ -163,6 +166,49 @@ st.markdown(
     font-size:0.9rem;
     }
 
+    .hero-compare{
+    position:relative;
+    width:100%;
+    aspect-ratio:4/3;
+    border-radius:26px;
+    overflow:hidden;
+    background:#111827;
+    box-shadow:0 34px 60px -30px rgba(15,23,42,0.55);
+    }
+
+    .hero-compare img{
+    position:absolute;
+    inset:0;
+    width:100%;
+    height:100%;
+    object-fit:cover;
+    }
+
+    .hero-compare img.after{ clip-path:inset(0 0 0 52%); }
+
+    .hero-compare::after{
+    content:"";
+    position:absolute;
+    top:0; bottom:0; left:52%;
+    width:3px;
+    background:rgba(255,255,255,0.92);
+    box-shadow:0 0 0 1px rgba(15,23,42,0.1);
+    }
+
+    .hero-label{
+    position:absolute;
+    top:18px;
+    padding:7px 14px;
+    border-radius:999px;
+    font-size:0.78rem;
+    font-weight:600;
+    letter-spacing:0.05em;
+    text-transform:uppercase;
+    }
+
+    .hero-label.before{ left:18px; background:rgba(15,23,42,0.75); color:#f9fafb; }
+    .hero-label.after{ right:18px; background:rgba(236,72,153,0.85); color:#fff; }
+
     .section-title{
     font-size:1.85rem;
     font-weight:800;
@@ -200,38 +246,38 @@ st.markdown(
     .stRadio label{ font-weight:600; color:#374151; }
 
     @media (max-width: 1100px){
+    .hero-section{ grid-template-columns:1fr; padding:26px 24px; }
     .hero-title{ font-size:2.3rem; }
     .hero-subtext{ max-width:none; }
     }
 
+    @media (max-width: 640px){
+    .hero-buttons{ flex-direction:column; align-items:flex-start; }
+    .hero-compare{ aspect-ratio:3/4; }
+    }
 </style>
 """,
     unsafe_allow_html=True,
 )
-
 # ------------------------------[ 1) 카카오 OAuth 설정 ]------------------------
-REST_API_KEY = os.getenv("KAKAO_REST_API_KEY")
-REDIRECT_URI = os.getenv("KAKAO_REDIRECT_URI", "http://localhost:8501")
-STATE_SECRET = (
-    os.getenv("KAKAO_STATE_SECRET")
-    or os.getenv("OAUTH_STATE_SECRET")
-    or (REST_API_KEY or "dev-secret")
-)
+REST_API_KEY = os.getenv("KAKAO_REST_API_KEY", "caf4fd09d45864146cb6e75f70c713a1")
+REDIRECT_URI = os.getenv("KAKAO_REDIRECT_URI", "https://hackteam32.streamlit.app")
+STATE_SECRET = os.getenv("KAKAO_STATE_SECRET", "UzdfMyaTkcNsJ2eVnRoKjUIOvWbeAy5E")
+    #or os.getenv("OAUTH_STATE_SECRET")
+    #or (REST_API_KEY or "dev-secret")
+
 AUTHORIZE_URL = "https://kauth.kakao.com/oauth/authorize"
 TOKEN_URL = "https://kauth.kakao.com/oauth/token"
 USERME_URL = "https://kapi.kakao.com/v2/user/me"
 STATE_TTL_SEC = 5 * 60
-
 def _hmac_sha256(key: str, msg: str) -> str:
     return hmac.new(key.encode(), msg.encode(), hashlib.sha256).hexdigest()
-
 def make_state() -> str:
     ts = str(int(time.time()))
     nonce = secrets.token_urlsafe(8)
     raw = f"{ts}.{nonce}"
     sig = _hmac_sha256(STATE_SECRET, raw)
     return f"{raw}.{sig}"
-
 def verify_state(state: str) -> bool:
     if not state or state.count(".") != 2:
         return False
@@ -246,7 +292,6 @@ def verify_state(state: str) -> bool:
     if time.time() - ts_i > STATE_TTL_SEC:
         return False
     return True
-
 def build_auth_url() -> str:
     state = make_state()
     return (
@@ -256,18 +301,17 @@ def build_auth_url() -> str:
         f"&response_type=code"
         f"&state={state}"
     )
-
 def exchange_code_for_token(code: str) -> dict:
     data = {
         "grant_type": "authorization_code",
         "client_id": REST_API_KEY,
         "redirect_uri": REDIRECT_URI,
         "code": code,
+        "client_secret":STATE_SECRET
     }
     response = requests.post(TOKEN_URL, data=data, timeout=10)
     response.raise_for_status()
     return response.json()
-
 def get_user_profile(access_token: str) -> dict:
     response = requests.get(
         USERME_URL,
@@ -276,7 +320,6 @@ def get_user_profile(access_token: str) -> dict:
     )
     response.raise_for_status()
     return response.json()
-
 def extract_profile(user_me: dict):
     account = (user_me or {}).get("kakao_account", {}) or {}
     profile = account.get("profile", {}) or {}
@@ -287,16 +330,13 @@ def extract_profile(user_me: dict):
         nickname = nickname or props.get("nickname")
         img = img or props.get("profile_image") or props.get("thumbnail_image")
     return nickname, img
-
 # ------------------------------[ 2) 콜백/로그아웃 처리 ]------------------------
 _query_params = (
     st.query_params if hasattr(st, "query_params") else st.experimental_get_query_params()
 )
-
 def _first_param(name: str):
     value = _query_params.get(name)
     return value[0] if isinstance(value, list) and value else value
-
 if _first_param("logout") == "1":
     st.session_state.pop("kakao_token", None)
     st.session_state.pop("kakao_profile", None)
@@ -305,14 +345,12 @@ if _first_param("logout") == "1":
     else:
         st.experimental_set_query_params()
     st.rerun()
-
 error = _first_param("error")
 error_description = _first_param("error_description")
 code = _first_param("code")
 state = _first_param("state")
-
 if error:
-    st.error(f"카카오 인증 에러: {error}\\n{error_description or ''}")
+    st.error(f"카카오 인증 에러: {error}\n{error_description or ''}")
 elif code:
     if not verify_state(state):
         st.error("state 검증 실패(CSRF/만료). 다시 시도해주세요.")
@@ -321,6 +359,20 @@ elif code:
             token_json = exchange_code_for_token(code)
             st.session_state.kakao_token = token_json
             st.session_state.kakao_profile = get_user_profile(token_json["access_token"])
+
+            # === 팝업 창이면 토큰을 부모창으로 전달 ===
+            st.markdown(f"""
+                <script>
+                  if (window.opener) {{
+                    window.opener.postMessage({{"kakao_token": "{token_json['access_token']}" }}, "*");
+                    window.close();
+                  }} else {{
+                    // fallback: 그냥 현재창 리다이렉트
+                    window.location.href = "/";
+                  }}
+                </script>
+                """, unsafe_allow_html=True)
+
             if hasattr(st, "query_params"):
                 st.query_params.clear()
             else:
@@ -328,16 +380,26 @@ elif code:
             st.rerun()
         except requests.HTTPError as exc:
             st.exception(exc)
+import streamlit.components.v1 as components
 
+components.html("""
+<script>
+window.addEventListener("message", (event) => {
+    if (event.data.kakao_token) {
+        // 토큰 받으면 쿼리파라미터로 붙여서 새로고침
+        window.location.href = "/?token=" + event.data.kakao_token;
+    }
+});
+</script>
+""", height=0)
 # ------------------------------[ 3) 우상단 네비바 ]-----------------------------
 auth_url = build_auth_url()
 nickname, img_url = None, None
 if "kakao_profile" in st.session_state:
     nickname, img_url = extract_profile(st.session_state["kakao_profile"])
-
 nav_parts = ["<div class='navbar'><div class='nav-right'>"]
 if "kakao_token" not in st.session_state:
-    nav_parts.append(f"<a class='kakao-btn' href='{auth_url}'>카카오 로그인</a>")
+    nav_parts.append(f"<a class='kakao-btn' href='{auth_url}' target='_blank'>카카오 로그인</a>")
 else:
     nav_parts.append("<a class='logout-btn' href='?logout=1'>로그아웃</a>")
     if img_url:
@@ -348,136 +410,11 @@ else:
 nav_parts.append("</div></div>")
 st.markdown("\n".join(nav_parts), unsafe_allow_html=True)
 
-# ------------------------------[ 3-A) 비교 위젯 컴포넌트 ]----------------------
-def render_before_after_compare(before_b64: str,
-                                after_b64: str,
-                                start: int = 48,
-                                height: int = 460,
-                                key: str = "hero"):
-    """
-    Streamlit 컴포넌트(iframe) 안에서 동작하는 Before/After 비교 위젯.
-    - before_b64 / after_b64: 'data:image/png;base64,...' 없이 순수 base64 문자열만 넣기
-    - start: 초기 분할 위치(%) 0~100
-    - height: 컴포넌트 높이(px)
-    - key: 중복 방지용
-    """
-    html = f"""
-<div id="wrap-{key}">
-  <style>
-    .cmp {{
-      position: relative;
-      width: 100%;
-      aspect-ratio: 4/3;
-      border-radius: 26px;
-      overflow: hidden;
-      background: #111827;
-      box-shadow: 0 34px 60px -30px rgba(15,23,42,.55);
-      user-select: none;
-      touch-action: none;
-    }}
-    .cmp img {{
-      position: absolute; inset: 0;
-      width: 100%; height: 100%; object-fit: cover;
-      pointer-events: none;
-    }}
-    .cmp img.after {{ clip-path: inset(0 0 0 {100 - start}%); transition: clip-path .06s linear; }}
-    .cmp .divider {{
-      position: absolute; top:0; bottom:0; left: {start}%;
-      width: 3px; background: rgba(255,255,255,.95);
-      box-shadow: 0 0 0 1px rgba(15,23,42,.12);
-      transform: translateX(-1.5px);
-      pointer-events: none;
-    }}
-    .cmp .label {{
-      position: absolute; top: 14px;
-      padding: 6px 12px; border-radius: 999px;
-      font-size: 12.5px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase;
-    }}
-    .cmp .label.before {{ left: 14px; background: rgba(17,24,39,.82); color: #f9fafb; }}
-    .cmp .label.after  {{ right:14px; background: rgba(236,72,153,.9); color: #fff; }}
-    .cmp input[type=range] {{
-      position: absolute; left:0; right:0; bottom: 8px;
-      width: 50%; margin: 0 auto;
-      appearance: none; height: 8px; border-radius: 999px;
-      background: rgba(255,255,255,.65);
-      outline: none; border: none;
-    }}
-    .cmp input[type=range]::-webkit-slider-thumb {{
-      appearance: none; width: 18px; height: 18px; border-radius: 50%;
-      background: white; border: 1px solid rgba(0,0,0,.15);
-      box-shadow: 0 1px 2px rgba(0,0,0,.12);
-      cursor: pointer;
-    }}
-    .cmp input[type=range]::-moz-range-thumb {{
-      width: 18px; height: 18px; border-radius: 50%;
-      background: white; border: 1px solid rgba(0,0,0,.15);
-      cursor: pointer;
-    }}
-    @media (max-width: 640px) {{ .cmp {{ aspect-ratio: 3/4; }} }}
-  </style>
-
-  <div class="cmp" id="cmp-{key}">
-    <img class="before" src="data:image/png;base64,{before_b64}" alt="before"/>
-    <img class="after"  src="data:image/png;base64,{after_b64}"  alt="after"/>
-    <div class="divider"></div>
-    <span class="label before">Before</span>
-    <span class="label after">After</span>
-    <input class="slider" type="range" min="0" max="100" value="{start}" aria-label="Before/After slider"/>
-  </div>
-
-  <script>
-  (function() {{
-    const root = document.getElementById("cmp-{key}");
-    if (!root || root.dataset.bound === "1") return;
-    root.dataset.bound = "1";
-    const after   = root.querySelector("img.after");
-    const divider = root.querySelector(".divider");
-    const slider  = root.querySelector(".slider");
-
-    function setSplit(pct) {{
-      pct = Math.max(0, Math.min(100, Number(pct)));
-      after.style.clipPath = "inset(0 0 0 " + (100 - pct) + "%)";
-      divider.style.left = pct + "%";
-      slider.value = pct;
-    }}
-    setSplit(slider.value);
-
-    slider.addEventListener("input", (e) => setSplit(e.target.value));
-
-    let dragging = False = false;
-  }})();
-  </script>
-</div>
-"""
-    # Fix a minor JS typo (set dragging variable correctly)
-    html = html.replace("let dragging = False = false;", "let dragging = false;") + """
-<script>
-(function(){
-  const root = document.getElementById("cmp-""" + key + """");
-  if(!root) return;
-  let dragging = false;
-  const slider = root.querySelector(".slider");
-  function pointerToPct(evt){
-    const rect = root.getBoundingClientRect();
-    const x = (evt.clientX - rect.left) / rect.width * 100;
-    const pct = Math.max(0, Math.min(100, x));
-    slider.value = pct;
-    root.querySelector("img.after").style.clipPath = "inset(0 0 0 " + (100 - pct) + "%)";
-    root.querySelector(".divider").style.left = pct + "%";
-  }
-  root.addEventListener("pointerdown", (e)=>{ dragging = true; pointerToPct(e); });
-  window.addEventListener("pointermove", (e)=>{ if(dragging) pointerToPct(e); });
-  window.addEventListener("pointerup",   ()=>{ dragging = false; });
-  window.addEventListener("pointercancel",()=>{ dragging = false; });
-})();
-</script>
-"""
-    components.html(html, height=height, scrolling=False)
-
 # ------------------------------[ 3-1) 히어로 섹션 ]----------------------------
 @st.cache_data(show_spinner=False)
 def load_demo_compare_images() -> Dict[str, Optional[str]]:
     """Load demo before/after images as base64 strings for the hero preview."""
+
     base_dir = Path(__file__).resolve().parent
 
     def _read(path: Path) -> Optional[str]:
@@ -498,8 +435,10 @@ def load_demo_compare_images() -> Dict[str, Optional[str]]:
         str(after_path): after_encoded,
     }
 
+
 def render_hero_section(auth_url: str, is_logged_in: bool) -> None:
     images = load_demo_compare_images()
+
     base_dir = Path(__file__).resolve().parent
 
     before_b64 = (
@@ -513,51 +452,118 @@ def render_hero_section(auth_url: str, is_logged_in: bool) -> None:
         or images.get(str(base_dir / "after.png"))
     )
 
-    # 텍스트 영역(왼쪽) + 비교 위젯(오른쪽)
-    left, right = st.columns([1.1, 0.9], gap="large")
+    compare_script = """
+    <script>
+    (function(){
+        var guardKey = 'heroCompareInit';
+        if (window[guardKey]) {
+            return;}
+        window[guardKey] = true;
+        function applyCompare(container){
+            if (!container || container.dataset.bound === '1') {
+                return;
+            }
+            container.dataset.bound = '1';
 
-    with left:
-        primary_label = "복원 작업 시작하기" if is_logged_in else "카카오 계정으로 계속"
-        primary_href = "#restore-app" if is_logged_in else auth_url
-        caption = (
-            "로그인 상태입니다. 바로 복원을 시작해보세요."
-            if is_logged_in
-            else "카카오 로그인 시 복원 기록이 세션에 보존됩니다."
-        )
-        st.markdown(
-            f"""
-<div class='hero-section'>
-  <div class='hero-text'>
-    <div class='hero-badge'>AI Photo Revival</div>
-    <h1 class='hero-title'>오래된 사진 복원 : <span>AI로 온라인 사진 복원</span></h1>
-    <p class='hero-subtext'>흑백의 시간을 되살리고, 선명한 디테일까지 복원하는 프리미엄 AI 파이프라인. 업로드만 하면 자동 색보정, 노이즈 제거, 해상도 업스케일까지 한 번에 경험할 수 있습니다.</p>
-    <div class='hero-buttons'>
-      <a class='cta-primary' href='{primary_href}'>{primary_label}</a>
-      <a class='cta-secondary' href='#restore-app'>게스트 모드로 먼저 체험하기</a>
-    </div>
-    <small class='cta-caption'>{caption}</small>
-  </div>
-</div>
-""",
-            unsafe_allow_html=True,
-        )
+            var slider = container.querySelector('.compare-slider');
+            var afterImg = container.querySelector('.hero-img.after');
+            var divider = container.querySelector('.hero-divider');
+            if (!slider || !afterImg) {
+                return;
+            }
 
-    with right:
-        if before_b64 and after_b64:
-            render_before_after_compare(before_b64, after_b64, start=48, height=460, key="hero")
-        else:
-            st.markdown(
-                """
-<div style='display:flex;align-items:center;justify-content:center;background:#f1f5f9;border-radius:24px;height:420px;box-shadow:0 10px 30px -20px rgba(0,0,0,.15);'>
-  <span style='color:#94a3b8;font-weight:600;'>샘플 이미지를 불러오지 못했습니다.</span>
-</div>
-                """,
-                unsafe_allow_html=True,
-            )
+            function setValue(value){
+                var numeric = Math.min(100, Math.max(0, Number(value)));
+                afterImg.style.clipPath = 'inset(0 0 0 ' + (100 - numeric) + '%)';
+                if (divider) {
+                    divider.style.left = numeric + '%';
+                }
+            }
+
+            var start = container.dataset.start || slider.value || 50;
+            slider.value = start;
+            setValue(start);
+
+            slider.addEventListener('input', function(evt){
+                setValue(evt.target.value);
+            });
+        }
+
+        function init(){
+            document.querySelectorAll('.hero-compare.compare-ready').forEach(applyCompare);
+        }
+
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', init);
+        } else {
+            init();
+        }
+
+        var observer = new MutationObserver(function(){ init(); });
+        observer.observe(document.body, { childList: true, subtree: true });
+    })();
+    </script>
+    """
+
+    if before_b64 and after_b64:
+        compare_html = f"""
+        <div class='hero-compare compare-ready' data-start='48'>
+            <img src='data:image/png;base64,{before_b64}' alt='복원 전' class='hero-img before'/>
+            <img src='data:image/png;base64,{after_b64}' alt='복원 후' class='hero-img after'/>
+            <div class='hero-divider'></div>
+            <span class='hero-label before'>Before</span>
+            <span class='hero-label after'>After</span>
+            <input type='range' min='0' max='100' value='48' class='compare-slider' aria-label='Before After slider'/>
+        </div>
+        {compare_script}
+        """
+    else:
+        compare_html = """
+        <div class='hero-compare' style='display:flex;align-items:center;justify-content:center;background:#f1f5f9;'>
+            <span style='color:#94a3b8;font-weight:600;'>샘플 이미지를 불러오지 못했습니다.</span>
+        </div>
+        """
+
+    primary_label = "복원 작업 시작하기" if is_logged_in else "카카오 계정으로 계속"
+    primary_href = "#restore-app" if is_logged_in else auth_url
+    caption = (
+        "로그인 상태입니다. 바로 복원을 시작해보세요."
+        if is_logged_in
+        else "카카오 로그인 시 복원 기록이 세션에 보존됩니다."
+    )
+
+    hero_html = f"""
+    <section class='hero-section'>
+        <div class='hero-text'>
+            <div class='hero-badge'>AI Photo Revival</div>
+            <h1 class='hero-title'>오래된 사진 복원 : <span>AI로 온라인 사진 복원</span></h1>
+            <p class='hero-subtext'>흑백의 시간을 되살리고, 선명한 디테일까지 복원하는 프리미엄 AI 파이프라인. 업로드만 하면 자동 색보정, 노이즈 제거, 해상도 업스케일까지 한 번에 경험할 수 있습니다.</p>
+            <div class='hero-buttons'>
+                <a class='cta-primary' href='{primary_href}'>
+                    {primary_label}
+                </a>
+                <a class='cta-secondary' href='#restore-app'>게스트 모드로 먼저 체험하기</a>
+            </div>
+            <small class='cta-caption'>{caption}</small>
+        </div>
+        <div class='hero-visual'>
+            <div class='hero-compare compare-ready' data-start='48'>
+                <img src='data:image/png;base64,{before_b64}' alt='복원 전' class='hero-img before'/>
+                <img src='data:image/png;base64,{after_b64}' alt='복원 후' class='hero-img after'/>
+                <div class='hero-divider'></div>
+                <span class='hero-label before'>Before</span>
+                <span class='hero-label after'>After</span>
+            <input type='range' min='0' max='100' value='48' class='compare-slider' aria-label='Before After slider'/>
+            </div>
+        </div>
+    </section>
+    """
+
+    st.markdown(hero_html, unsafe_allow_html=True)
+
 
 # 히어로 섹션 렌더링
 render_hero_section(auth_url, "kakao_token" in st.session_state)
-
 # ------------------------------[ 4) 복원 유틸 함수 ]---------------------------
 def ensure_restoration_state() -> Dict:
     if "restoration" not in st.session_state:
@@ -572,37 +578,30 @@ def ensure_restoration_state() -> Dict:
             "story": None,
         }
     return st.session_state.restoration
-
 def image_from_bytes(data: bytes) -> Image.Image:
     image = Image.open(io.BytesIO(data))
     image = ImageOps.exif_transpose(image)
     return image.convert("RGB")
-
 def image_to_bytes(image: Image.Image) -> bytes:
     buffer = io.BytesIO()
     image.save(buffer, format="PNG")
     return buffer.getvalue()
-
 def colorize_image(image: Image.Image) -> Image.Image:
     gray = image.convert("L")
     colorized = ImageOps.colorize(gray, black="#1e1e1e", white="#f8efe3", mid="#88a6c6")
     return colorized.convert("RGB")
-
 def upscale_image(image: Image.Image) -> Image.Image:
     width, height = image.size
     factor = 2
     return image.resize((width * factor, height * factor), Image.LANCZOS)
-
 def denoise_image(image: Image.Image) -> Image.Image:
     smoothed = image.filter(ImageFilter.MedianFilter(size=3))
     return smoothed.filter(ImageFilter.SMOOTH_MORE)
-
 def format_status(counts: Dict[str, int]) -> str:
     return (
         f"[컬러화 {'✔' if counts['color'] else '✖'} / "
         f"해상도 {counts['upscale']}회 / 노이즈 {counts['denoise']}회]"
     )
-
 def add_history_entry(label: str, image_bytes: bytes, note: Optional[str] = None):
     restoration = ensure_restoration_state()
     entry = {
@@ -614,7 +613,6 @@ def add_history_entry(label: str, image_bytes: bytes, note: Optional[str] = None
     }
     restoration["history"].append(entry)
     restoration["current_bytes"] = image_bytes
-
 def reset_restoration(upload_digest: str, original_bytes: bytes, photo_type: str, description: str):
     restoration = ensure_restoration_state()
     restoration.update(
@@ -629,7 +627,6 @@ def reset_restoration(upload_digest: str, original_bytes: bytes, photo_type: str
             "story": None,
         }
     )
-
 def build_story(description: str, counts: Dict[str, int], photo_type: str) -> str:
     base = description.strip() or "이 사진"
     story_lines = []
@@ -660,7 +657,6 @@ def build_story(description: str, counts: Dict[str, int], photo_type: str) -> st
     story_lines.append(outro)
     wrapped = [textwrap.fill(line, width=46) for line in story_lines]
     return "\n\n".join(wrapped)
-
 def handle_auto_colorization(photo_type: str):
     restoration = ensure_restoration_state()
     if photo_type != "흑백":
@@ -673,14 +669,12 @@ def handle_auto_colorization(photo_type: str):
     bytes_data = image_to_bytes(colorized)
     restoration["story"] = None
     add_history_entry("컬러 복원 (자동)", bytes_data, note="흑백 이미지를 기본 팔레트로 색보정했습니다.")
-
 def can_run_operation(operation: str, allow_repeat: bool) -> bool:
     restoration = ensure_restoration_state()
     count = restoration["counts"].get(operation, 0)
     if allow_repeat:
         return count < 3
     return count == 0
-
 def run_upscale():
     restoration = ensure_restoration_state()
     image = image_from_bytes(restoration["current_bytes"])
@@ -689,7 +683,6 @@ def run_upscale():
     bytes_data = image_to_bytes(upscaled)
     restoration["story"] = None
     add_history_entry("해상도 업", bytes_data, note="ESRGAN 대체 알고리즘(샘플)으로 2배 업스케일했습니다.")
-
 def run_denoise():
     restoration = ensure_restoration_state()
     image = image_from_bytes(restoration["current_bytes"])
@@ -698,7 +691,6 @@ def run_denoise():
     bytes_data = image_to_bytes(denoised)
     restoration["story"] = None
     add_history_entry("노이즈 제거", bytes_data, note="NAFNet 대체 필터(샘플)로 노이즈를 완화했습니다.")
-
 def run_story_generation():
     restoration = ensure_restoration_state()
     text = build_story(restoration["description"], restoration["counts"], restoration["photo_type"])
@@ -708,6 +700,7 @@ def run_story_generation():
         "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         "status": dict(restoration["counts"]),
     }
+
 
 # ------------------------------[ 5) 본문 UI ]----------------------------------
 st.title("📌 사진 복원 + 스토리 생성")
@@ -744,11 +737,9 @@ with st.container():
         else:
             restoration_state["description"] = description
             restoration_state["photo_type"] = photo_type
-
 allow_repeat = st.checkbox("고급 옵션(실험적) - 동일 작업 반복 허용 (최대 3회)")
 if allow_repeat:
     st.warning("⚠ 동일 작업 반복은 처리 시간이 길어지거나 이미지 손상을 유발할 수 있습니다.")
-
 if restoration_state["original_bytes"] is None:
     st.info("사진을 업로드하면 복원 옵션이 활성화됩니다.")
 else:
@@ -769,34 +760,31 @@ else:
         story_clicked = st.button("스토리 생성", use_container_width=True, disabled=not can_story)
         if story_clicked:
             run_story_generation()
-
     st.divider()
     col_original, col_result = st.columns(2)
     with col_original:
         st.subheader("원본 이미지")
-        st.image(restoration_state["original_bytes"], use_column_width=True)
+        st.image(restoration_state["original_bytes"], use_container_width=True)
         st.caption(format_status({"color": 0, "upscale": 0, "denoise": 0}))
     with col_result:
         st.subheader("복원 결과")
         if restoration_state["history"]:
             latest = restoration_state["history"][-1]
-            st.image(latest["bytes"], use_column_width=True, caption=latest["label"])
+            st.image(latest["bytes"], use_container_width=True, caption=latest["label"])
             st.caption(format_status(latest["status"]))
             if latest.get("note"):
                 st.markdown(f"*{latest['note']}*")
         else:
             st.info("아직 수행된 복원 작업이 없습니다.")
-
     if len(restoration_state["history"]) > 1:
         with st.expander("전체 작업 히스토리"):
             for idx, entry in enumerate(restoration_state["history"], 1):
                 st.markdown(f"**{idx}. {entry['label']}** ({entry['timestamp']})")
-                st.image(entry["bytes"], use_column_width=True)
+                st.image(entry["bytes"], use_container_width=True)
                 st.caption(format_status(entry["status"]))
                 if entry.get("note"):
                     st.write(entry["note"])
                 st.markdown("---")
-
     if restoration_state.get("story"):
         st.subheader("스토리")
         story_info = restoration_state["story"]
@@ -804,7 +792,6 @@ else:
         st.caption(
             f"생성 시각: {story_info['timestamp']} / {format_status(story_info['status'])}"
         )
-
 st.markdown("---")
 st.caption(
     "*DeOldify, ESRGAN, NAFNet 등의 실제 모델 연동을 위한 자리 표시자로, 현재는 샘플 필터를 사용합니다.*"
