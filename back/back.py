@@ -13,6 +13,9 @@ import requests
 import streamlit as st
 from PIL import Image, ImageFilter, ImageOps
 import textwrap
+
+import warnings
+warnings.filterwarnings("ignore", category=DeprecationWarning)
 # ============================================================
 # Kakao OAuth for Streamlit (No-session CSRF using HMAC state)
 # - 우상단 고정 네비바(화이트, 라운드, 그림자)
@@ -65,7 +68,8 @@ st.markdown(
     body{ background:#f8fafc; }
 
     .hero-section{
-    margin-top:32px;
+    margin-top:60px;
+    margin-bottom:40px;   /* ✅ 추가 */
     padding:32px 36px;
     border-radius:28px;
     background:linear-gradient(135deg, rgba(255,240,247,0.9), rgba(236,233,255,0.85));
@@ -122,6 +126,7 @@ st.markdown(
     line-height:1.7;
     margin-bottom:28px;
     max-width:520px;
+    flex:1 1 240px;
     }
 
     .hero-buttons{ display:flex; flex-wrap:wrap; gap:14px; align-items:center; }
@@ -137,6 +142,7 @@ st.markdown(
     text-decoration:none !important;
     transition:transform 0.25s ease, box-shadow 0.25s ease;
     box-shadow:0 10px 30px -15px rgba(236,72,153,0.75);
+    min-height:52px;
     }
 
     .cta-primary{
@@ -182,13 +188,14 @@ st.markdown(
 
     .hero-compare img.after{ clip-path:inset(0 0 0 52%); }
 
-    .hero-compare::after{
+    .hero-divider{
     content:"";
     position:absolute;
     top:0; bottom:0; left:52%;
     width:3px;
     background:rgba(255,255,255,0.92);
     box-shadow:0 0 0 1px rgba(15,23,42,0.1);
+    pointer-events:none;
     }
 
     .hero-label{
@@ -204,6 +211,39 @@ st.markdown(
 
     .hero-label.before{ left:18px; background:rgba(15,23,42,0.75); color:#f9fafb; }
     .hero-label.after{ right:18px; background:rgba(236,72,153,0.85); color:#fff; }
+
+    .hero-compare input[type=range]{
+    -webkit-appearance:none;
+    appearance:none;
+    position:absolute;
+    inset:0;
+    width:100%;
+    height:100%;
+    background:transparent;
+    margin:0;
+    cursor:ew-resize;
+    z-index:2;
+    }
+
+    .hero-compare input[type=range]::-webkit-slider-thumb{
+    -webkit-appearance:none;
+    appearance:none;
+    width:24px;
+    height:24px;
+    border-radius:50%;
+    background:#ec4899;
+    border:3px solid #fff;
+    box-shadow:0 4px 16px rgba(236,72,153,0.35);
+    }
+
+    .hero-compare input[type=range]::-moz-range-thumb{
+    width:24px;
+    height:24px;
+    border-radius:50%;
+    background:#ec4899;
+    border:3px solid #fff;
+    box-shadow:0 4px 16px rgba(236,72,153,0.35);
+    }
 
     .section-title{
     font-size:1.85rem;
@@ -252,9 +292,33 @@ st.markdown(
     .hero-compare{ aspect-ratio:3/4; }
     }
 </style>
-""",
-    unsafe_allow_html=True,
-)
+""", unsafe_allow_html=True)
+
+
+# 123
+st.markdown("""
+<style>
+/* === 슬라이더 드래그 안 먹는 현상 고정: 레이어/포인터 우선순위 정리 === */
+.hero-compare img{ z-index:1; pointer-events:none; }   /* 이미지 클릭 불가 */
+.hero-divider{ z-index:4; pointer-events:none; }       /* 구분선 클릭 불가 */
+.hero-label{ z-index:5; pointer-events:none; }         /* 라벨 클릭 불가 */
+
+/* 슬라이더를 최상단으로 올려서 드래그 이벤트 전부 흡수 */
+.hero-compare .compare-slider,
+.hero-compare input[type=range]{
+  position:absolute; inset:0; width:100%; height:100%;
+  z-index:10 !important;
+  cursor:ew-resize;
+  touch-action:none;
+  -webkit-appearance:none; appearance:none;
+  background:transparent; outline:none; border:none;
+}
+</style>
+""", unsafe_allow_html=True)
+
+
+
+
 # ------------------------------[ 1) 카카오 OAuth 설정 ]------------------------
 REST_API_KEY = os.getenv("KAKAO_REST_API_KEY", "caf4fd09d45864146cb6e75f70c713a1")
 REDIRECT_URI = os.getenv("KAKAO_REDIRECT_URI", "https://hackteam32.streamlit.app")
@@ -376,37 +440,28 @@ elif code:
             st.rerun()
         except requests.HTTPError as exc:
             st.exception(exc)
-
-import streamlit.components.v1 as components
-
-components.html("""
-<script>
-window.addEventListener("message", (event) => {
-    if (event.data.kakao_token) {
-        // 토큰 받으면 쿼리파라미터로 붙여서 새로고침
-        window.location.href = "/?token=" + event.data.kakao_token;
-    }
-});
-</script>
-""", height=0)
-
 # ------------------------------[ 3) 우상단 네비바 ]-----------------------------
 auth_url = build_auth_url()
 nickname, img_url = None, None
 if "kakao_profile" in st.session_state:
     nickname, img_url = extract_profile(st.session_state["kakao_profile"])
-nav_parts = ["<div class='navbar'><div class='nav-right'>"]
-if "kakao_token" not in st.session_state:
-    nav_parts.append(f"<a class='kakao-btn' href='{auth_url}' target='_blank'>카카오 로그인</a>")
-else:
-    nav_parts.append("<a class='logout-btn' href='?logout=1'>로그아웃</a>")
+nav_content = []
+if "kakao_token" in st.session_state:
+    nav_content.append("<a class='logout-btn' href='?logout=1'>로그아웃</a>")
+
+#nav_parts = ["<div class='navbar'><div class='nav-right'>"]
+#if "kakao_token" not in st.session_state:
+#    nav_parts.append(f"<a class='kakao-btn' href='{auth_url}' target='_blank'>카카오 로그인</a>")
+#else:
+#    nav_parts.append("<a class='logout-btn' href='?logout=1'>로그아웃</a>")
     if img_url:
         safe_nick = (nickname or "").replace("<", "&lt;").replace(">", "&gt;")
-        nav_parts.append(
+        nav_content.append(
             f"<img class='avatar' src='{img_url}' alt='avatar' title='{safe_nick}'/>"
         )
-nav_parts.append("</div></div>")
-st.markdown("\n".join(nav_parts), unsafe_allow_html=True)
+if nav_content:
+    nav_html = "<div class='navbar'><div class='nav-right'>" + "".join(nav_content) + "</div></div>"
+    st.markdown(nav_html, unsafe_allow_html=True)
 
 # ------------------------------[ 3-1) 히어로 섹션 ]----------------------------
 @st.cache_data(show_spinner=False)
@@ -513,7 +568,6 @@ def render_hero_section(auth_url: str, is_logged_in: bool) -> None:
             <span class='hero-label after'>After</span>
             <input type='range' min='0' max='100' value='48' class='compare-slider' aria-label='Before After slider'/>
         </div>
-        {compare_script}
         """
     else:
         compare_html = """
@@ -546,18 +600,20 @@ def render_hero_section(auth_url: str, is_logged_in: bool) -> None:
         </div>
         <div class='hero-visual'>
             <div class='hero-compare compare-ready' data-start='48'>
-                <img src='data:image/png;base64,{before_b64}' alt='복원 전' class='hero-img before'/>
-                <img src='data:image/png;base64,{after_b64}' alt='복원 후' class='hero-img after'/>
-                <div class='hero-divider'></div>
-                <span class='hero-label before'>Before</span>
-                <span class='hero-label after'>After</span>
+            <img src='data:image/png;base64,{before_b64}' alt='복원 전' class='hero-img before'/>
+            <img src='data:image/png;base64,{after_b64}' alt='복원 후' class='hero-img after'/>
+            <div class='hero-divider'></div>
+            <span class='hero-label before'>Before</span>
+            <span class='hero-label after'>After</span>
             <input type='range' min='0' max='100' value='48' class='compare-slider' aria-label='Before After slider'/>
-            </div>
+        </div>
         </div>
     </section>
     """
 
     st.markdown(hero_html, unsafe_allow_html=True)
+    if before_b64 and after_b64:
+        st.markdown(compare_script, unsafe_allow_html=True)
 
 
 # 히어로 섹션 렌더링
@@ -762,13 +818,13 @@ else:
     col_original, col_result = st.columns(2)
     with col_original:
         st.subheader("원본 이미지")
-        st.image(restoration_state["original_bytes"],)
+        st.image(restoration_state["original_bytes"], use_container_width=True)
         st.caption(format_status({"color": 0, "upscale": 0, "denoise": 0}))
     with col_result:
         st.subheader("복원 결과")
         if restoration_state["history"]:
             latest = restoration_state["history"][-1]
-            st.image(latest["bytes"], caption=latest["label"])
+            st.image(latest["bytes"], use_container_width=True, caption=latest["label"])
             st.caption(format_status(latest["status"]))
             if latest.get("note"):
                 st.markdown(f"*{latest['note']}*")
@@ -778,7 +834,7 @@ else:
         with st.expander("전체 작업 히스토리"):
             for idx, entry in enumerate(restoration_state["history"], 1):
                 st.markdown(f"**{idx}. {entry['label']}** ({entry['timestamp']})")
-                st.image(entry["bytes"], use_column_width=True)
+                st.image(entry["bytes"], use_container_width=True)
                 st.caption(format_status(entry["status"]))
                 if entry.get("note"):
                     st.write(entry["note"])

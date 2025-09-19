@@ -292,9 +292,33 @@ st.markdown(
     .hero-compare{ aspect-ratio:3/4; }
     }
 </style>
-""",
-    unsafe_allow_html=True,
-)
+""", unsafe_allow_html=True)
+
+
+# 123
+st.markdown("""
+<style>
+/* === 슬라이더 드래그 안 먹는 현상 고정: 레이어/포인터 우선순위 정리 === */
+.hero-compare img{ z-index:1; pointer-events:none; }   /* 이미지 클릭 불가 */
+.hero-divider{ z-index:4; pointer-events:none; }       /* 구분선 클릭 불가 */
+.hero-label{ z-index:5; pointer-events:none; }         /* 라벨 클릭 불가 */
+
+/* 슬라이더를 최상단으로 올려서 드래그 이벤트 전부 흡수 */
+.hero-compare .compare-slider,
+.hero-compare input[type=range]{
+  position:absolute; inset:0; width:100%; height:100%;
+  z-index:10 !important;
+  cursor:ew-resize;
+  touch-action:none;
+  -webkit-appearance:none; appearance:none;
+  background:transparent; outline:none; border:none;
+}
+</style>
+""", unsafe_allow_html=True)
+
+
+
+
 # ------------------------------[ 1) 카카오 OAuth 설정 ]------------------------
 REST_API_KEY = os.getenv("KAKAO_REST_API_KEY", "caf4fd09d45864146cb6e75f70c713a1")
 REDIRECT_URI = os.getenv("KAKAO_REDIRECT_URI", "https://hackteam32.streamlit.app")
@@ -484,52 +508,36 @@ def render_hero_section(auth_url: str, is_logged_in: bool) -> None:
     compare_script = """
     <script>
     (function(){
-        var guardKey = 'heroCompareInit';
-        if (window[guardKey]) {
-            return;}
-        window[guardKey] = true;
-        function applyCompare(container){
-            if (!container || container.dataset.bound === '1') {
-                return;
-            }
-            container.dataset.bound = '1';
-
-            var slider = container.querySelector('.compare-slider');
-            var afterImg = container.querySelector('.hero-img.after');
-            var divider = container.querySelector('.hero-divider');
-            if (!slider || !afterImg) {
-                return;
-            }
-
-            function setValue(value){
-                var numeric = Math.min(100, Math.max(0, Number(value)));
-                afterImg.style.clipPath = 'inset(0 0 0 ' + (100 - numeric) + '%)';
-                if (divider) {
-                    divider.style.left = numeric + '%';
-                }
-            }
-
-            var start = container.dataset.start || slider.value || 50;
-            slider.value = start;
-            setValue(start);
-
-            slider.addEventListener('input', function(evt){
-                setValue(evt.target.value);
-            });
+      var guardKey='heroCompareInit';
+      if (window[guardKey]) return; window[guardKey]=true;
+    
+      function apply(container){
+        if (!container || container.dataset.bound==='1') return;
+        container.dataset.bound='1';
+        var slider  = container.querySelector('.compare-slider');
+        var afterImg= container.querySelector('.hero-img.after');
+        var divider = container.querySelector('.hero-divider');
+        if (!slider || !afterImg) return;
+    
+        function setValue(v){
+          var pct   = Math.min(100, Math.max(0, Number(v)));
+          var inset = 'inset(0 0 0 ' + (100 - pct) + '%)';
+          afterImg.style.clipPath      = inset;   // 표준
+          afterImg.style.webkitClipPath= inset;   // 웹킷(Safari 등) 대응
+          if (divider) divider.style.left = pct + '%';
         }
-
-        function init(){
-            document.querySelectorAll('.hero-compare.compare-ready').forEach(applyCompare);
-        }
-
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', init);
-        } else {
-            init();
-        }
-
-        var observer = new MutationObserver(function(){ init(); });
-        observer.observe(document.body, { childList: true, subtree: true });
+    
+        var start = container.dataset.start || slider.value || 50;
+        slider.value = start; setValue(start);
+    
+        var handler = function(e){ setValue(e.target.value); };
+        slider.addEventListener('input', handler);
+        slider.addEventListener('change', handler);
+      }
+    
+      function init(){ document.querySelectorAll('.hero-compare.compare-ready').forEach(apply); }
+      if (document.readyState==='loading') document.addEventListener('DOMContentLoaded', init); else init();
+      new MutationObserver(init).observe(document.body, { childList:true, subtree:true });
     })();
     </script>
     """
@@ -575,15 +583,16 @@ def render_hero_section(auth_url: str, is_logged_in: bool) -> None:
             <small class='cta-caption'>{caption}</small>
         </div>
         <div class='hero-visual'>
-            <div class='hero-compare compare-ready' data-start='48'>
-            <img src='data:image/png;base64,{before_b64}' alt='복원 전' class='hero-img before'/>
-            <img src='data:image/png;base64,{after_b64}' alt='복원 후' class='hero-img after'/>
-            <div class='hero-divider'></div>
-            <span class='hero-label before'>Before</span>
-            <span class='hero-label after'>After</span>
-            <input type='range' min='0' max='100' value='48' class='compare-slider' aria-label='Before After slider'/>
-        </div>
-        </div>
+                <div class='hero-compare compare-ready' data-start='48'>
+      <img src='data:image/png;base64,{before_b64}' alt='복원 전' class='hero-img before'/>
+      <img src='data:image/png;base64,{after_b64}' alt='복원 후' class='hero-img after'/>
+      <div class='hero-divider'></div>
+      <span class='hero-label before'>Before</span>
+      <span class='hero-label after'>After</span>
+      <input type='range' min='0' max='100' value='48'
+             class='compare-slider' aria-label='Before After slider'/>
+    </div>
+    {compare_script}  <!-- ✅ 여기서 같이 주입 -->
     </section>
     """
 
