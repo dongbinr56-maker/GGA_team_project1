@@ -437,7 +437,7 @@ elif code:
                 st.query_params.clear()
             else:
                 st.experimental_set_query_params()
-            st.rerun()
+            #st.rerun()
         except requests.HTTPError as exc:
             st.exception(exc)
 # ------------------------------[ 3) 우상단 네비바 ]-----------------------------
@@ -597,9 +597,6 @@ def render_hero_section(auth_url: str, is_logged_in: bool) -> None:
     """
 
     st.markdown(hero_html, unsafe_allow_html=True)
-    if before_b64 and after_b64:
-        st.markdown(compare_script, unsafe_allow_html=True)
-
 
 # 히어로 섹션 렌더링
 render_hero_section(auth_url, "kakao_token" in st.session_state)
