@@ -791,8 +791,8 @@ with st.container():
                     <div class="btn-wrap">
                         <a href="{build_auth_url()}">
                           <button class="kakao-btn">카카오 계정으로 계속</button>
-                        </a>
-                        <button class="guest-btn">게스트 모드로 먼저 체험하기</button>
+                        <a href="#restore-app" class="guest-btn" role="button">게스트 모드로 먼저 체험하기</a>
+
                     </div>
                 </div>
                 """,
@@ -810,36 +810,6 @@ with st.container():
     with right_col:
         render_compare(before_b64, after_b64, start=50, height_px=hero_h)
 
-        # ⬇︎ 같은 들여쓰기(오른쪽 컬럼 안)
-        st.markdown("""
-        <script>
-        (function () {
-          function scrollToRestore() {
-            var t = document.getElementById('restore-app') || document.getElementById('restore-title');
-            if (!t) { window.location.hash = '#restore-app'; return; }
-            try { t.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
-            catch (e) { window.location.hash = '#restore-app'; }
-          }
-          function bindGuestBtn() {
-            var btns = document.querySelectorAll('button.guest-btn');
-            btns.forEach(function (b) {
-              if (b.dataset.bound === '1') return;
-              b.dataset.bound = '1';
-              b.addEventListener('click', function (e) {
-                e.preventDefault();
-                scrollToRestore();
-              });
-            });
-          }
-          if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', bindGuestBtn);
-          } else {
-            bindGuestBtn();
-          }
-          new MutationObserver(bindGuestBtn).observe(document.body, { childList: true, subtree: true });
-        })();
-        </script>
-        """, unsafe_allow_html=True)
 
     # 여기서부터는 들여쓰기 빼고(블록 밖) 이어서 다른 코드...
 
