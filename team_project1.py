@@ -420,7 +420,7 @@ html, body, [class*="css"] {
   font-size: 6rem;
   font-weight: 800;
   text-align: center;
-  margin: 10px 0 20px 0;   /* 👈 상단/하단 여백 최소화 */
+  margin: 12px 0 20px 0;   /* 👈 상단/하단 여백 최소화 */
   line-height: 1.1;
 }
 
