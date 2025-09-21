@@ -728,7 +728,7 @@ with st.container():
                 section[data-testid="stSidebar"] {{
                     width: 320px !important;
                     background-color: #f9f9f9;
-                    padding: 5px 15px 15px 15px; /* 위쪽 패딩 줄임 */
+                    padding: 1px 3px 15px 15px; /* 위쪽 패딩 줄임 */
                 }}
                 .sidebar-row {{
                     display: flex;
