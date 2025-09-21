@@ -283,7 +283,7 @@ html, body, [class*="css"]{
 }
 
 /* 타이틀 */
-.hero-title{ font-size: 4.8rem; line-height: 1.15; font-weight: 800; letter-spacing: -0.02em; text-align: center;   /* 가운데 정렬 */}
+.hero-title{ font-size: 4.5rem; line-height: 1.15; font-weight: 800; letter-spacing: -0.02em; text-align: center;   /* 가운데 정렬 */}
 .hero-title .em{ color:#ec4899; }
 
 /* 설명문(요구 문구로 교체) */
@@ -361,6 +361,19 @@ html, body, [class*="css"]{
 }
 </style>
 """, unsafe_allow_html=True)
+
+# --- Smooth scroll (global) ---
+st.markdown("""
+<style>
+/* Global smooth scrolling for anchor jumps */
+html, body, [data-testid="stAppViewContainer"], .main, .block-container { 
+  scroll-behavior: smooth !important; 
+}
+#page-bottom { scroll-margin-top: 0; }
+#restore-app { scroll-margin-top: 24px; }  /* If you ever scroll to restore section */
+</style>
+""", unsafe_allow_html=True)
+
 st.markdown("""
 <style>
 /* 1) Streamlit 슬라이더/범용 range 입력, 전역에서 감추기 */
@@ -419,7 +432,7 @@ html, body, [class*="css"] {
 
 /* ✅ 메인 타이틀 (애니메이션) */
 .main-title {
-  font-size: 6rem;
+  font-size: 7rem;
   font-weight: 800;
   text-align: center;
   margin: 10px 0 20px 0;   /* 👈 상단/하단 여백 최소화 */
@@ -442,12 +455,14 @@ html, body, [class*="css"] {
 }
 
 /* 각 글자 딜레이 */
-.main-title span:nth-child(1){ animation-delay: 0.1s; }
-.main-title span:nth-child(2){ animation-delay: 0.3s; }
-.main-title span:nth-child(3){ animation-delay: 0.5s; }
-.main-title span:nth-child(4){ animation-delay: 0.7s; }
-.main-title span:nth-child(5){ animation-delay: 0.9s; }
-.main-title span:nth-child(6){ animation-delay: 1.1s; }
+.main-title span:nth-child(1){ animation-delay: 0.3s; }
+.main-title span:nth-child(2){ animation-delay: 0.5s; }
+.main-title span:nth-child(3){ animation-delay: 0.7s; }
+.main-title span:nth-child(4){ animation-delay: 0.9s; }
+.main-title span:nth-child(5){ animation-delay: 1.1s; }
+.main-title span:nth-child(6){ animation-delay: 1.3s; }
+.main-title span:nth-child(7){ animation-delay: 1.5s; }
+.main-title span:nth-child(8){ animation-delay: 0.3s; }
 
 /* ✅ Hero 섹션 */
 .hero-wrap {
@@ -463,12 +478,14 @@ html, body, [class*="css"] {
 """, unsafe_allow_html=True)
 st.markdown("""
 <div class="main-title">
+  <span>"</span>
   <span>복</span>
   <span>원</span>
   <span>이</span>
   <span> </span>
   <span>되</span>
   <span>.</span>
+  <span>"</span>
 </div>
 """, unsafe_allow_html=True)
 st.markdown("""
@@ -790,7 +807,7 @@ with st.container():
                         <a href="{build_auth_url()}">
                           <button class="kakao-btn">카카오 계정으로 계속</button>
                         </a>
-                        <button class="guest-btn">게스트 모드로 먼저 체험하기</button>
+                        <a href="#page-bottom" class="guest-btn" role="button">게스트 모드로 먼저 체험하기</a>
                     </div>
                 </div>
                 """,
@@ -807,19 +824,64 @@ with st.container():
 
     with right_col:
         render_compare(before_b64, after_b64, start=50, height_px=hero_h)
+# --- 게스트 모드 버튼 클릭 시 복원 섹션으로 스무스 스크롤 ---
+st.markdown("""
+<script>
+(function () {
+  function scrollToRestore() {
+    var t = document.getElementById('restore-app')
+         || document.getElementById('restore-title');
+    if (!t) { window.location.hash = '#restore-app'; return; }
+    try { t.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+    catch (e) { window.location.hash = '#restore-app'; }
+  }
 
-# =====================[ 사진 복원 기능 + 워크플로우 (추가 블록, 가드 포함) ]=====================
-# ⚠️ 위의 기존 내용은 수정하지 않음. 이 블록만 맨 아래에 추가됨.
+  function bindGuestBtn() {
+    var btns = document.querySelectorAll('button.guest-btn');
+    btns.forEach(function (b) {
+      if (b.dataset.bound === '1') return;
+      b.dataset.bound = '1';
+      b.addEventListener('click', function (e) {
+        e.preventDefault();
+        scrollToRestore();
+      });
+    });
+  }
 
-# --- 추가 임포트(중복 허용) ---
+  // 초기 + 재렌더 대비
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', bindGuestBtn);
+  } else {
+    bindGuestBtn();
+  }
+  new MutationObserver(bindGuestBtn).observe(document.body, { childList: true, subtree: true });
+})();
+</script>
+""", unsafe_allow_html=True)
+
+# =====================[ 사진 복원 기능 + 워크플로우 (추가 블록) ]=====================
+# ⚠️ 기존 team_project1.py 내용은 절대 수정하지 않고, 이 블록만 파일 맨 하단에 추가하세요.
+
+# --- 추가 임포트(중복 무관) ---
 from typing import Dict, Optional
 from datetime import datetime
-from PIL import Image, ImageFilter, ImageOps
-import textwrap, io, hashlib
+from PIL import ImageFilter, ImageOps
+import textwrap
+import io
+import hashlib
 
 
-# --- 세션 상태 ---
+# --- 세션 상태 생성/유지: 복원 컨텍스트 ---
 def ensure_restoration_state() -> Dict:
+    """
+    복원 작업 전반을 추적하는 세션 상태를 초기화/반환합니다.
+    - upload_digest: 업로드 파일의 SHA1(업로드 변경 감지)
+    - original_bytes: 원본 이미지 바이트
+    - current_bytes: 현재 단계 결과 이미지 바이트
+    - counts: 각 작업의 실행 횟수(반복 허용시 3회까지)
+    - history: 단계별 결과 스냅샷 목록
+    - story: 스토리 텍스트/메타
+    """
     if "restoration" not in st.session_state:
         st.session_state.restoration = {
             "upload_digest": None,
@@ -834,37 +896,50 @@ def ensure_restoration_state() -> Dict:
     return st.session_state.restoration
 
 
-# --- 바이트 변환 ---
+# --- 바이트<->PIL 변환 유틸 ---
 def image_from_bytes(data: bytes) -> Image.Image:
+    """업로드 바이트 → PIL.Image (EXIF 회전 교정 + RGB)"""
     image = Image.open(io.BytesIO(data))
     image = ImageOps.exif_transpose(image)
     return image.convert("RGB")
 
 
 def image_to_bytes(image: Image.Image) -> bytes:
-    buf = io.BytesIO()
-    image.save(buf, format="PNG")
-    return buf.getvalue()
+    """PIL.Image → PNG 바이트"""
+    buffer = io.BytesIO()
+    image.save(buffer, format="PNG")
+    return buffer.getvalue()
 
 
-# --- 복원 샘플 알고리즘 ---
+# --- 복원 알고리즘(샘플 자리표시자) ---
 def colorize_image(image: Image.Image) -> Image.Image:
+    """
+    흑백 이미지를 간단 팔레트로 컬러라이즈(샘플).
+    실제 모델(DeOldify 등)로 교체 예정인 자리표시자.
+    """
     gray = image.convert("L")
-    return ImageOps.colorize(gray, black="#1e1e1e", white="#f8efe3", mid="#88a6c6").convert("RGB")
+    colorized = ImageOps.colorize(gray, black="#1e1e1e", white="#f8efe3", mid="#88a6c6")
+    return colorized.convert("RGB")
 
 
 def upscale_image(image: Image.Image) -> Image.Image:
+    """해상도 2배 업스케일(ESRGAN 대체 샘플)"""
     w, h = image.size
     return image.resize((w * 2, h * 2), Image.LANCZOS)
 
 
 def denoise_image(image: Image.Image) -> Image.Image:
-    return image.filter(ImageFilter.MedianFilter(3)).filter(ImageFilter.SMOOTH_MORE)
+    """노이즈 제거(NAFNet 대체 샘플: MedianFilter + SMOOTH_MORE)"""
+    smoothed = image.filter(ImageFilter.MedianFilter(size=3))
+    return smoothed.filter(ImageFilter.SMOOTH_MORE)
 
 
-# --- 상태/히스토리 ---
-def format_status(c: Dict[str, int]) -> str:
-    return f"[컬러화 {'✔' if c['color'] else '✖'} / 해상도 {c['upscale']}회 / 노이즈 {c['denoise']}회]"
+# --- 상태/히스토리 도우미 ---
+def format_status(counts: Dict[str, int]) -> str:
+    return (
+        f"[컬러화 {'✔' if counts['color'] else '✖'} / "
+        f"해상도 {counts['upscale']}회 / 노이즈 {counts['denoise']}회]"
+    )
 
 
 def add_history_entry(label: str, image_bytes: bytes, note: Optional[str] = None):
@@ -882,54 +957,60 @@ def add_history_entry(label: str, image_bytes: bytes, note: Optional[str] = None
 
 def reset_restoration(upload_digest: str, original_bytes: bytes, photo_type: str, description: str):
     r = ensure_restoration_state()
-    r.update({
-        "upload_digest": upload_digest,
-        "original_bytes": original_bytes,
-        "photo_type": photo_type,
-        "description": description,
-        "current_bytes": original_bytes,
-        "counts": {"color": 0, "upscale": 0, "denoise": 0, "story": 0},
-        "history": [],
-        "story": None,
-    })
+    r.update(
+        {
+            "upload_digest": upload_digest,
+            "original_bytes": original_bytes,
+            "photo_type": photo_type,
+            "description": description,
+            "current_bytes": original_bytes,
+            "counts": {"color": 0, "upscale": 0, "denoise": 0, "story": 0},
+            "history": [],
+            "story": None,
+        }
+    )
 
 
-# --- 스토리 ---
+# --- 스토리 생성(샘플) ---
 def build_story(description: str, counts: Dict[str, int], photo_type: str) -> str:
-    base = (description or "").strip() or "이 사진"
-    lines = [f"{base}은(는) 조심스럽게 복원 과정을 거치고 있습니다."]
+    base = description.strip() or "이 사진"
+    lines = []
+    lines.append(f"{base}은(는) 조심스럽게 복원 과정을 거치고 있습니다.")
     if photo_type == "흑백":
         if counts["color"]:
             lines.append("흑백으로 남아 있던 순간에 색을 덧입히자 잊혔던 온기와 공기가 되살아났습니다.")
         else:
             lines.append("아직 색을 입히지 못한 채 시간 속에서 기다리고 있습니다.")
     if counts["upscale"]:
-        lines.append(f"세부 묘사를 살리기 위해 해상도 보정을 {counts['upscale']}회 반복했습니다.")
+        lines.append(f"세부 묘사를 살리기 위해 해상도 보정을 {counts['upscale']}회 반복하며 윤곽을 또렷하게 다듬었습니다.")
     if counts["denoise"]:
-        lines.append(f"잡음 정리 과정도 {counts['denoise']}회 진행되었습니다.")
+        lines.append(f"잡음 정리도 {counts['denoise']}회 진행되어 표정과 배경이 한층 차분해졌습니다.")
     lines.append("복원된 이미지를 바라보는 지금, 사진 속 이야기가 현재의 우리에게 말을 건네는 듯합니다.")
     lines.append("이 장면이 전하고 싶은 메시지가 있다면, 그것은 기억을 계속 이어가자는 마음일지도 모릅니다.")
     return "\n\n".join(textwrap.fill(x, width=46) for x in lines)
 
 
+# --- 자동 컬러화(흑백 업로드 시 1회 자동) ---
 def handle_auto_colorization(photo_type: str):
     r = ensure_restoration_state()
     if photo_type != "흑백" or r["counts"]["color"]:
         return
-    img = image_from_bytes(r["current_bytes"])
-    out = colorize_image(img)
+    original = image_from_bytes(r["current_bytes"])
+    colorized = colorize_image(original)
     r["counts"]["color"] += 1
-    add_history_entry("컬러 복원 (자동)", image_to_bytes(out), note="흑백 이미지를 기본 팔레트로 색보정했습니다.")
+    bytes_data = image_to_bytes(colorized)
     r["story"] = None
+    add_history_entry("컬러 복원 (자동)", bytes_data, note="흑백 이미지를 기본 팔레트로 색보정했습니다.")
 
 
-def can_run_operation(op: str, allow_repeat: bool) -> bool:
+# --- 실행 가능한지 체크(반복 허용시 최대 3회) ---
+def can_run_operation(operation: str, allow_repeat: bool) -> bool:
     r = ensure_restoration_state()
-    cnt = r["counts"].get(op, 0)
+    cnt = r["counts"].get(operation, 0)
     return (cnt < 3) if allow_repeat else (cnt == 0)
 
 
-# --- 버튼 액션(가드 포함) ---
+# --- 버튼 액션 ---
 def run_upscale():
     # hard guard: 재렌더/더블클릭 대비 (고급 옵션 미체크 시 1회 제한)
     allow_repeat = st.session_state.get('allow_repeat', False)
@@ -960,14 +1041,53 @@ def run_story_generation():
     r = ensure_restoration_state()
     text = build_story(r["description"], r["counts"], r["photo_type"])
     r["counts"]["story"] += 1
-    r["story"] = {"text": text, "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"), "status": dict(r["counts"])}
+    r["story"] = {
+        "text": text,
+        "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "status": dict(r["counts"]),
+    }
 
 
-# --- 섹션 앵커 ---
+# --- (선택) 섹션용 CSS: 타이틀/리드문 스타일만 최소 추가 ---
+st.markdown("""
+<style>
+.section-title{ font-size:1.85rem; font-weight:800; color:#111827; margin:28px 0 8px; }
+.section-lead{ font-size:1rem; color:#4b5563; margin-bottom:18px; }
+.stButton button{
+  border-radius:12px; padding:10px 16px; font-weight:700; border:none;
+  background:linear-gradient(120deg, #ec4899, #f97316); color:#fff;
+}
+</style>
+""", unsafe_allow_html=True)
+
+# --- 앵커(히어로 버튼이 여기로 스크롤) ---
+# (그대로 유지) 앵커
 st.markdown("<div id='restore-app'></div>", unsafe_allow_html=True)
 
-# --- 본문 UI ---
+# 1) CSS: 이 블록을 앵커 다음에 넣기
+st.markdown("""
+<style>
+/* 이 제목만 확실히 잡아 패딩 크게 */
+#restore-title { padding: 10rem 0 10px !important; margin-top: 0 !important; }
+</style>
+""", unsafe_allow_html=True)
+_nick = None
+if "kakao_profile" in st.session_state:
+    try:
+        _nick, _ = extract_profile(st.session_state["kakao_profile"])
+    except Exception:
+        _nick = None
+st.markdown("<div style='height: 10rem'></div>", unsafe_allow_html=True)
+# 2) 제목 렌더링: st.title 대신 아래 한 줄로 교체
 st.markdown("<h1 id='restore-title'>📌 사진 복원 + 스토리 생성</h1>", unsafe_allow_html=True)
+
+st.markdown("<h2 class='section-title'>AI 복원 워크플로우</h2>", unsafe_allow_html=True)
+st.markdown("<p class='section-lead'>업로드 → 복원 옵션 실행 → 스토리 생성까지 한 번에.</p>", unsafe_allow_html=True)
+
+if "kakao_token" in st.session_state:
+    st.success(f"로그인됨: {(_nick or '카카오 사용자')}")
+else:
+    st.info("카카오 로그인을 진행하면 복원 내역이 세션에 보존됩니다. (게스트 모드도 체험 가능)")
 
 rstate = ensure_restoration_state()
 
@@ -976,18 +1096,20 @@ with st.container():
     photo_type = st.radio("사진 유형", ["흑백", "컬러"], horizontal=True, key="photo_type_selector")
     description = st.text_input("사진에 대한 간단한 설명", key="photo_description", placeholder="예: 1970년대 외할아버지의 결혼식")
     uploaded_file = st.file_uploader("사진 파일 업로드", type=["png", "jpg", "jpeg", "bmp", "tiff"], key="photo_uploader")
+
     if uploaded_file is not None:
         file_bytes = uploaded_file.getvalue()
         digest = hashlib.sha1(file_bytes).hexdigest()
         if rstate["upload_digest"] != digest:
             reset_restoration(digest, file_bytes, photo_type, description)
+            # 업로드 즉시 current_bytes를 원본으로 설정
             ensure_restoration_state()["current_bytes"] = file_bytes
+            # 흑백이면 1회 자동 컬러화
             handle_auto_colorization(photo_type)
         else:
             rstate["description"] = description
             rstate["photo_type"] = photo_type
 
-# 고급 옵션 체크(세션 유지)
 allow_repeat = st.checkbox("고급 옵션(실험적) - 동일 작업 반복 허용 (최대 3회)", key="allow_repeat")
 if allow_repeat:
     st.warning("⚠ 동일 작업 반복은 처리 시간이 길어지거나 이미지 손상을 유발할 수 있습니다.")
@@ -1006,23 +1128,26 @@ else:
         if st.button("노이즈 제거", key="btn_denoise", use_container_width=True, disabled=not can_dn):
             run_denoise()
     with c3:
-        # 스토리는 반복 제한 없음(원하면 동일 방식으로 제한 가능)
-        if st.button("스토리 생성", key="btn_story", use_container_width=True):
+        can_st = can_run_operation("story", allow_repeat)
+        if st.button("스토리 생성", key="btn_story", use_container_width=True, disabled=not can_st):
             run_story_generation()
 
     st.divider()
     col_a, col_b = st.columns(2)
+
     with col_a:
         st.subheader("원본 이미지")
         st.image(rstate["original_bytes"], use_container_width=True)
         st.caption(format_status({"color": 0, "upscale": 0, "denoise": 0}))
+
     with col_b:
         st.subheader("복원 결과")
         if rstate["history"]:
             latest = rstate["history"][-1]
             st.image(latest["bytes"], use_container_width=True, caption=latest["label"])
             st.caption(format_status(latest["status"]))
-            if latest.get("note"): st.markdown(f"*{latest['note']}*")
+            if latest.get("note"):
+                st.markdown(f"*{latest['note']}*")
         else:
             st.info("아직 수행된 복원 작업이 없습니다.")
 
@@ -1032,7 +1157,8 @@ else:
                 st.markdown(f"**{idx}. {entry['label']}** ({entry['timestamp']})")
                 st.image(entry["bytes"], use_container_width=True)
                 st.caption(format_status(entry["status"]))
-                if entry.get("note"): st.write(entry["note"])
+                if entry.get("note"):
+                    st.write(entry["note"])
                 st.markdown("---")
 
     if rstate.get("story"):
@@ -1043,4 +1169,8 @@ else:
 
 st.markdown("---")
 st.caption("*DeOldify, ESRGAN, NAFNet 등의 실제 모델 연동을 위한 자리 표시자입니다(현재는 샘플 필터).*")
-# =====================[ 추가 블록 끝 ]=====================
+st.markdown("<div style='height: 8rem'></div>", unsafe_allow_html=True)
+# ====================[ 추가 블록 끝 ]====================
+
+# --- Anchor at the very bottom ---
+st.markdown("<div id='page-bottom'></div>", unsafe_allow_html=True)
