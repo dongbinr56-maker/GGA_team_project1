@@ -715,16 +715,6 @@ with st.container():
         # 로그인 성공 여부 확인
         if "kakao_profile" in st.session_state:
             # ===== Hero 영역 (로그인 시 버튼 감춤) =====
-            # 🔧 복원 섹션 CSS 넣는 곳 근처에 추가
-            st.markdown("""
-            <style>
-            /* 'restore-app' 앵커 다음에 렌더되는 첫 h1(= 섹션 제목)에 상단 여백 추가 */
-            #restore-app + div h1 { margin-top: 96px !important; }  /* 숫자만 조절 */
-            @media (min-width: 1200px){
-              #restore-app + div h1 { margin-top: 120px !important; }
-            }
-            </style>
-            """, unsafe_allow_html=True)
             st.markdown(
                 '<div class="left-stack">'
                 '<div class="hero-title">오래된 사진 복원 :<br> <span class="em">AI로 온라인 사진 복원</span></div>'
@@ -1008,7 +998,13 @@ if "kakao_profile" in st.session_state:
         _nick, _ = extract_profile(st.session_state["kakao_profile"])
     except Exception:
         _nick = None
-
+# ⬇️ 여기 '바로 아래'에 붙여 넣기
+st.markdown("""
+<style>
+/* 복원 섹션 제목(h1) 위/아래 패딩을 10px로 */
+#restore-app + div h1 { padding: 10rem 0 10px !important; }
+</style>
+""", unsafe_allow_html=True)
 # --- 본문 UI: 업로드 → 옵션 → 결과/히스토리/스토리 ---
 st.title("📌 사진 복원 + 스토리 생성")
 st.markdown("<h2 class='section-title'>AI 복원 워크플로우</h2>", unsafe_allow_html=True)
