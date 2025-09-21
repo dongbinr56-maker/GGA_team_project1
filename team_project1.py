@@ -36,29 +36,6 @@ KAKAO_AUTH_URL = "https://kauth.kakao.com/oauth/authorize"
 KAKAO_TOKEN_URL = "https://kauth.kakao.com/oauth/token"
 KAKAO_USER_URL = "https://kapi.kakao.com/v2/user/me"
 
-# ================================
-# 로그인 버튼
-# ================================
-if st.button("카카오 계정으로 계속"):
-    params = {
-        "client_id": REST_API_KEY,
-        "redirect_uri": REDIRECT_URI,
-        "response_type": "code",
-        "state": STATE_SECRET,
-    }
-    kakao_login_url = f"{KAKAO_AUTH_URL}?{urlencode(params)}"
-
-    st.markdown(
-        f"""
-        <div class="btn-wrap">
-            <a href="{kakao_login_url}">
-              <button class="kakao-btn">카카오 계정으로 계속</button>
-            </a>
-            <button class="guest-btn">게스트 모드로 먼저 체험하기</button>
-        </div>
-        """,
-        unsafe_allow_html=True
-    )
 
 # ================================
 # Redirect 콜백 처리 (신규 API 반영)
