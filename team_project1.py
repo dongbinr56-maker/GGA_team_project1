@@ -1097,4 +1097,5 @@ else:
 
 st.markdown("---")
 st.caption("*DeOldify, ESRGAN, NAFNet 등의 실제 모델 연동을 위한 자리 표시자입니다(현재는 샘플 필터).*")
+st.markdown("<div style='height: 8rem'></div>", unsafe_allow_html=True)
 # ====================[ 추가 블록 끝 ]====================
