@@ -44,7 +44,6 @@ KAKAO_AUTH_URL = "https://kauth.kakao.com/oauth/authorize"
 KAKAO_TOKEN_URL = "https://kauth.kakao.com/oauth/token"
 KAKAO_USER_URL = "https://kapi.kakao.com/v2/user/me"
 
-
 REST_API_KEY = os.getenv("KAKAO_REST_API_KEY", "caf4fd09d45864146cb6e75f70c713a1")
 REDIRECT_URI = os.getenv("KAKAO_REDIRECT_URI", "https://hackteam32.streamlit.app")
 STATE_SECRET = os.getenv("KAKAO_STATE_SECRET", "UzdfMyaTkcNsJ2eVnRoKjUIOvWbeAy5E")
@@ -191,7 +190,8 @@ elif code:
 #  - 너가 가진 Before/After 샘플로 교체해서 쓰면 됨
 # ------------------------------
 BEFORE_PATH = Path("before.png")  # 복원 전(흑백) 예시
-AFTER_PATH  = Path("after.png")   # 복원 후(컬러) 예시
+AFTER_PATH = Path("after.png")  # 복원 후(컬러) 예시
+
 
 # ------------------------------
 # [유틸] PIL 이미지 → data URI(base64)
@@ -204,6 +204,7 @@ def pil_to_data_uri(img: Image.Image, fmt: str = "JPEG", quality: int = 90) -> s
     mime = "image/png" if fmt.upper() == "PNG" else "image/jpeg"
     return f"data:{mime};base64,{b64}"
 
+
 # ------------------------------
 # [유틸] 예시 이미지 로드 + 가벼운 리사이즈
 #  - 너무 큰 이미지는 성능/메모리 고려해서 폭을 제한
@@ -215,7 +216,7 @@ def load_examples(max_width: int = 300):
         st.stop()
 
     before = Image.open(BEFORE_PATH).convert("RGB")
-    after  = Image.open(AFTER_PATH).convert("RGB")
+    after = Image.open(AFTER_PATH).convert("RGB")
 
     # 폭 제한 - 비율 유지
     def shrink(im: Image.Image) -> Image.Image:
@@ -225,12 +226,13 @@ def load_examples(max_width: int = 300):
         return im
 
     before = shrink(before)
-    after  = shrink(after)
+    after = shrink(after)
 
     # 미리보기 높이 추정: 가로형 기준으로 300~520 사이에서 적당히 잡음
     est_h = int(after.height * min(1.0, 800 / max(after.width, 1)))  # 폭 900 기준 비율
     est_h = max(300, min(est_h, 520))
     return before, after, est_h
+
 
 # ------------------------------
 # [UI/CSS] 스타일 정의
@@ -317,7 +319,6 @@ html, body, [class*="css"]{
   font-weight: 600;
   cursor: pointer;
 }
-
 /* 우측 비교 위젯 컨테이너 */
 .compare-wrap{
   position: relative; width:100%;
@@ -358,13 +359,6 @@ html, body, [class*="css"]{
   height: 100%;
   object-fit: cover;
 }
-/* 앵커(#... ) 클릭 시 부드럽게 스크롤 */
-html, body, [data-testid="stAppViewContainer"] { 
-  scroll-behavior: smooth !important; 
-}
-
-/* 도착 지점 조금 띄우고 싶으면 여기 숫자 조절 */
-#restore-app { scroll-margin-top: 24px; }  /* 0~120px 등 */
 </style>
 """, unsafe_allow_html=True)
 st.markdown("""
@@ -553,6 +547,7 @@ st.markdown(f"""
 </style>
 """, unsafe_allow_html=True)
 
+
 # HTML로 비교 위젯 렌더링 (오른쪽으로 밀면 After↑)
 # ------------------------------
 # [우측 비교 위젯] Before/After 슬라이더
@@ -615,7 +610,7 @@ def render_compare(before_b64: str, after_b64: str, start: int = 50, height_px: 
   <span class="badge before">Before</span>
   <span class="badge after">After</span>
   <img class="hero-img before" src="{before_b64}" />
-  <img class="hero-img after"  src="{after_b64}" style="clip-path: inset(0 {100-start}% 0 0);" />
+  <img class="hero-img after"  src="{after_b64}" style="clip-path: inset(0 {100 - start}% 0 0);" />
   <div class="hero-divider" id="divider" style="left:{start}%"></div>
 </div>
 
@@ -669,7 +664,8 @@ def render_compare(before_b64: str, after_b64: str, start: int = 50, height_px: 
 }})();
 </script>
 """
-    components.html(html, height=height_px+40)
+    components.html(html, height=height_px + 40)
+
 
 st.markdown("""
 <style>
@@ -707,11 +703,9 @@ input[type="range"]{
 </style>
 """, unsafe_allow_html=True)
 
-
-
 # 데이터 URI 변환
 before_b64 = pil_to_data_uri(before_img, fmt="JPEG", quality=90)
-after_b64  = pil_to_data_uri(after_img,  fmt="JPEG", quality=90)
+after_b64 = pil_to_data_uri(after_img, fmt="JPEG", quality=90)
 
 # ------------------------------
 # [레이아웃] 좌(텍스트) / 우(미리보기)
@@ -737,7 +731,7 @@ with st.container():
 
                 st.markdown(f"""
                 <style>
-                
+
                 section[data-testid="stSidebar"] {{
                     width: 320px !important;
                     background-color: #f9f9f9;
@@ -800,7 +794,7 @@ with st.container():
                         <a href="{build_auth_url()}">
                           <button class="kakao-btn">카카오 계정으로 계속</button>
                         </a>
-                        <a href="#restore-app" class="guest-btn" role="button">게스트 모드로 먼저 체험하기</a>
+                        <a href="#page-bottom" class="guest-btn" role="button">게스트 모드로 먼저 체험하기</a>
                     </div>
                 </div>
                 """,
@@ -818,12 +812,37 @@ with st.container():
     with right_col:
         render_compare(before_b64, after_b64, start=50, height_px=hero_h)
 
-    st.markdown("""
-    <style>
-    html, body, [data-testid="stAppViewContainer"] { scroll-behavior: smooth !important; }
-    #restore-app { scroll-margin-top: 24px; }  /* 도착 지점 살짝 띄우기(원하면 0~120px 조절) */
-    </style>
-    """, unsafe_allow_html=True)
+        # ⬇︎ 같은 들여쓰기(오른쪽 컬럼 안)
+        st.markdown("""
+        <script>
+        (function () {
+          function scrollToRestore() {
+            var t = document.getElementById('restore-app') || document.getElementById('restore-title');
+            if (!t) { window.location.hash = '#restore-app'; return; }
+            try { t.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+            catch (e) { window.location.hash = '#restore-app'; }
+          }
+          function bindGuestBtn() {
+            var btns = document.querySelectorAll('button.guest-btn');
+            btns.forEach(function (b) {
+              if (b.dataset.bound === '1') return;
+              b.dataset.bound = '1';
+              b.addEventListener('click', function (e) {
+                e.preventDefault();
+                scrollToRestore();
+              });
+            });
+          }
+          if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', bindGuestBtn);
+          } else {
+            bindGuestBtn();
+          }
+          new MutationObserver(bindGuestBtn).observe(document.body, { childList: true, subtree: true });
+        })();
+        </script>
+        """, unsafe_allow_html=True)
+
     # 여기서부터는 들여쓰기 빼고(블록 밖) 이어서 다른 코드...
 
 # =====================[ 사진 복원 기능 + 워크플로우 (추가 블록) ]=====================
@@ -836,6 +855,7 @@ from PIL import ImageFilter, ImageOps
 import textwrap
 import io
 import hashlib
+
 
 # --- 세션 상태 생성/유지: 복원 컨텍스트 ---
 def ensure_restoration_state() -> Dict:
@@ -861,6 +881,7 @@ def ensure_restoration_state() -> Dict:
         }
     return st.session_state.restoration
 
+
 # --- 바이트<->PIL 변환 유틸 ---
 def image_from_bytes(data: bytes) -> Image.Image:
     """업로드 바이트 → PIL.Image (EXIF 회전 교정 + RGB)"""
@@ -868,11 +889,13 @@ def image_from_bytes(data: bytes) -> Image.Image:
     image = ImageOps.exif_transpose(image)
     return image.convert("RGB")
 
+
 def image_to_bytes(image: Image.Image) -> bytes:
     """PIL.Image → PNG 바이트"""
     buffer = io.BytesIO()
     image.save(buffer, format="PNG")
     return buffer.getvalue()
+
 
 # --- 복원 알고리즘(샘플 자리표시자) ---
 def colorize_image(image: Image.Image) -> Image.Image:
@@ -884,15 +907,18 @@ def colorize_image(image: Image.Image) -> Image.Image:
     colorized = ImageOps.colorize(gray, black="#1e1e1e", white="#f8efe3", mid="#88a6c6")
     return colorized.convert("RGB")
 
+
 def upscale_image(image: Image.Image) -> Image.Image:
     """해상도 2배 업스케일(ESRGAN 대체 샘플)"""
     w, h = image.size
     return image.resize((w * 2, h * 2), Image.LANCZOS)
 
+
 def denoise_image(image: Image.Image) -> Image.Image:
     """노이즈 제거(NAFNet 대체 샘플: MedianFilter + SMOOTH_MORE)"""
     smoothed = image.filter(ImageFilter.MedianFilter(size=3))
     return smoothed.filter(ImageFilter.SMOOTH_MORE)
+
 
 # --- 상태/히스토리 도우미 ---
 def format_status(counts: Dict[str, int]) -> str:
@@ -900,6 +926,7 @@ def format_status(counts: Dict[str, int]) -> str:
         f"[컬러화 {'✔' if counts['color'] else '✖'} / "
         f"해상도 {counts['upscale']}회 / 노이즈 {counts['denoise']}회]"
     )
+
 
 def add_history_entry(label: str, image_bytes: bytes, note: Optional[str] = None):
     r = ensure_restoration_state()
@@ -912,6 +939,7 @@ def add_history_entry(label: str, image_bytes: bytes, note: Optional[str] = None
     }
     r["history"].append(entry)
     r["current_bytes"] = image_bytes
+
 
 def reset_restoration(upload_digest: str, original_bytes: bytes, photo_type: str, description: str):
     r = ensure_restoration_state()
@@ -927,6 +955,7 @@ def reset_restoration(upload_digest: str, original_bytes: bytes, photo_type: str
             "story": None,
         }
     )
+
 
 # --- 스토리 생성(샘플) ---
 def build_story(description: str, counts: Dict[str, int], photo_type: str) -> str:
@@ -946,6 +975,7 @@ def build_story(description: str, counts: Dict[str, int], photo_type: str) -> st
     lines.append("이 장면이 전하고 싶은 메시지가 있다면, 그것은 기억을 계속 이어가자는 마음일지도 모릅니다.")
     return "\n\n".join(textwrap.fill(x, width=46) for x in lines)
 
+
 # --- 자동 컬러화(흑백 업로드 시 1회 자동) ---
 def handle_auto_colorization(photo_type: str):
     r = ensure_restoration_state()
@@ -958,11 +988,13 @@ def handle_auto_colorization(photo_type: str):
     r["story"] = None
     add_history_entry("컬러 복원 (자동)", bytes_data, note="흑백 이미지를 기본 팔레트로 색보정했습니다.")
 
+
 # --- 실행 가능한지 체크(반복 허용시 최대 3회) ---
 def can_run_operation(operation: str, allow_repeat: bool) -> bool:
     r = ensure_restoration_state()
     cnt = r["counts"].get(operation, 0)
     return (cnt < 3) if allow_repeat else (cnt == 0)
+
 
 # --- 버튼 액션 ---
 def run_upscale():
@@ -973,6 +1005,7 @@ def run_upscale():
     r["story"] = None
     add_history_entry("해상도 업", image_to_bytes(out), note="ESRGAN 대체 알고리즘(샘플)으로 2배 업스케일했습니다.")
 
+
 def run_denoise():
     r = ensure_restoration_state()
     img = image_from_bytes(r["current_bytes"])
@@ -980,6 +1013,7 @@ def run_denoise():
     r["counts"]["denoise"] += 1
     r["story"] = None
     add_history_entry("노이즈 제거", image_to_bytes(out), note="NAFNet 대체 필터(샘플)로 노이즈를 완화했습니다.")
+
 
 def run_story_generation():
     r = ensure_restoration_state()
@@ -990,6 +1024,7 @@ def run_story_generation():
         "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
         "status": dict(r["counts"]),
     }
+
 
 # --- (선택) 섹션용 CSS: 타이틀/리드문 스타일만 최소 추가 ---
 st.markdown("""
@@ -1038,7 +1073,7 @@ with st.container():
     st.subheader("1. 사진 업로드")
     photo_type = st.radio("사진 유형", ["흑백", "컬러"], horizontal=True, key="photo_type_selector")
     description = st.text_input("사진에 대한 간단한 설명", key="photo_description", placeholder="예: 1970년대 외할아버지의 결혼식")
-    uploaded_file = st.file_uploader("사진 파일 업로드", type=["png","jpg","jpeg","bmp","tiff"], key="photo_uploader")
+    uploaded_file = st.file_uploader("사진 파일 업로드", type=["png", "jpg", "jpeg", "bmp", "tiff"], key="photo_uploader")
 
     if uploaded_file is not None:
         file_bytes = uploaded_file.getvalue()
@@ -1114,3 +1149,14 @@ st.markdown("---")
 st.caption("*DeOldify, ESRGAN, NAFNet 등의 실제 모델 연동을 위한 자리 표시자입니다(현재는 샘플 필터).*")
 st.markdown("<div style='height: 8rem'></div>", unsafe_allow_html=True)
 # ====================[ 추가 블록 끝 ]====================
+
+
+# --- Smooth scrolling for anchor jumps ---
+st.markdown("""
+<style>
+html, body, [data-testid="stAppViewContainer"] { scroll-behavior: smooth !important; }
+</style>
+""", unsafe_allow_html=True)
+
+# --- Anchor at the very bottom ---
+st.markdown("<div id='page-bottom'></div>", unsafe_allow_html=True)
