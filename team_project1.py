@@ -862,26 +862,21 @@ st.markdown("""
 # =====================[ 사진 복원 기능 + 워크플로우 (추가 블록) ]=====================
 # ⚠️ 기존 team_project1.py 내용은 절대 수정하지 않고, 이 블록만 파일 맨 하단에 추가하세요.
 
-# --- 추가 임포트(중복 무관) ---
+# =====================[ 사진 복원 기능 + 워크플로우 (정돈본) ]====================
+# ⚠ 기존 파일의 위쪽(Hero/로그인/비교 UI)은 절대 수정하지 말고,
+#   맨 아래에 이 블록만 한 번 넣으세요.
+
 from typing import Dict, Optional
 from datetime import datetime
-from PIL import ImageFilter, ImageOps
+from PIL import Image, ImageFilter, ImageOps
 import textwrap
 import io
 import hashlib
+import base64
+import streamlit as st
 
-
-# --- 세션 상태 생성/유지: 복원 컨텍스트 ---
+# ---------- 세션 상태 ----------
 def ensure_restoration_state() -> Dict:
-    """
-    복원 작업 전반을 추적하는 세션 상태를 초기화/반환합니다.
-    - upload_digest: 업로드 파일의 SHA1(업로드 변경 감지)
-    - original_bytes: 원본 이미지 바이트
-    - current_bytes: 현재 단계 결과 이미지 바이트
-    - counts: 각 작업의 실행 횟수(반복 허용시 3회까지)
-    - history: 단계별 결과 스냅샷 목록
-    - story: 스토리 텍스트/메타
-    """
     if "restoration" not in st.session_state:
         st.session_state.restoration = {
             "upload_digest": None,
@@ -892,59 +887,38 @@ def ensure_restoration_state() -> Dict:
             "counts": {"color": 0, "upscale": 0, "denoise": 0, "story": 0},
             "history": [],
             "story": None,
-            "file_name": file_name,
-            "file_name": None,
+            "file_name": None,  # 업로드 파일명
         }
     return st.session_state.restoration
 
-
-# --- 바이트<->PIL 변환 유틸 ---
+# ---------- 바이트 ↔ PIL ----------
 def image_from_bytes(data: bytes) -> Image.Image:
-    """업로드 바이트 → PIL.Image (EXIF 회전 교정 + RGB)"""
     image = Image.open(io.BytesIO(data))
     image = ImageOps.exif_transpose(image)
     return image.convert("RGB")
 
-
 def image_to_bytes(image: Image.Image) -> bytes:
-    """PIL.Image → PNG 바이트"""
-    buffer = io.BytesIO()
-    image.save(buffer, format="PNG")
-    return buffer.getvalue()
+    buf = io.BytesIO()
+    image.save(buf, format="PNG")
+    return buf.getvalue()
 
-
-# --- 복원 알고리즘(샘플 자리표시자) ---
+# ---------- 복원 알고리즘(샘플 자리표시자) ----------
 def colorize_image(image: Image.Image) -> Image.Image:
-    """
-    흑백 이미지를 간단 팔레트로 컬러라이즈(샘플).
-    실제 모델(DeOldify 등)로 교체 예정인 자리표시자.
-    """
     gray = image.convert("L")
-    colorized = ImageOps.colorize(gray, black="#1e1e1e", white="#f8efe3", mid="#88a6c6")
-    return colorized.convert("RGB")
-
+    return ImageOps.colorize(gray, black="#1e1e1e", white="#f8efe3", mid="#88a6c6").convert("RGB")
 
 def upscale_image(image: Image.Image) -> Image.Image:
-    """해상도 2배 업스케일(ESRGAN 대체 샘플)"""
     w, h = image.size
     return image.resize((w * 2, h * 2), Image.LANCZOS)
 
-
 def denoise_image(image: Image.Image) -> Image.Image:
-    """노이즈 제거(NAFNet 대체 샘플: MedianFilter + SMOOTH_MORE)"""
-    smoothed = image.filter(ImageFilter.MedianFilter(size=3))
-    return smoothed.filter(ImageFilter.SMOOTH_MORE)
+    return image.filter(ImageFilter.MedianFilter(3)).filter(ImageFilter.SMOOTH_MORE)
 
+# ---------- 상태/히스토리 ----------
+def format_status(c: Dict[str, int]) -> str:
+    return f"[컬러화 {'✔' if c['color'] else '✖'} / 해상도 {c['upscale']}회 / 노이즈 {c['denoise']}회]"
 
-# --- 상태/히스토리 도우미 ---
-def format_status(counts: Dict[str, int]) -> str:
-    return (
-        f"[컬러화 {'✔' if counts['color'] else '✖'} / "
-        f"해상도 {counts['upscale']}회 / 노이즈 {counts['denoise']}회]"
-    )
-
-
-def add_history_entry(label: str, image_bytes: bytes, note: Optional[str] = None):
+def add_history_entry(label: str, image_bytes: bytes, note: Optional[str] = None) -> None:
     r = ensure_restoration_state()
     entry = {
         "label": label,
@@ -957,67 +931,56 @@ def add_history_entry(label: str, image_bytes: bytes, note: Optional[str] = None
     r["history"].append(entry)
     r["current_bytes"] = image_bytes
 
-
-def reset_restoration(upload_digest: str, original_bytes: bytes, photo_type: str, description: str, file_name: str):
+def reset_restoration(upload_digest: str, original_bytes: bytes, photo_type: str, description: str, file_name: str) -> None:
     r = ensure_restoration_state()
-    r.update(
-        {
-            "upload_digest": upload_digest,
-            "original_bytes": original_bytes,
-            "photo_type": photo_type,
-            "description": description,
-            "current_bytes": original_bytes,
-            "counts": {"color": 0, "upscale": 0, "denoise": 0, "story": 0},
-            "history": [],
-            "story": None,
-        }
-    )
+    r.update({
+        "upload_digest": upload_digest,
+        "original_bytes": original_bytes,
+        "photo_type": photo_type,
+        "description": description,
+        "current_bytes": original_bytes,
+        "counts": {"color": 0, "upscale": 0, "denoise": 0, "story": 0},
+        "history": [],
+        "story": None,
+        "file_name": file_name,
+    })
 
-
-# --- 스토리 생성(샘플) ---
+# ---------- 스토리 ----------
 def build_story(description: str, counts: Dict[str, int], photo_type: str) -> str:
-    base = description.strip() or "이 사진"
-    lines = []
-    lines.append(f"{base}은(는) 조심스럽게 복원 과정을 거치고 있습니다.")
+    base = (description or "").strip() or "이 사진"
+    lines = [f"{base}은(는) 조심스럽게 복원 과정을 거치고 있습니다."]
     if photo_type == "흑백":
         if counts["color"]:
             lines.append("흑백으로 남아 있던 순간에 색을 덧입히자 잊혔던 온기와 공기가 되살아났습니다.")
         else:
             lines.append("아직 색을 입히지 못한 채 시간 속에서 기다리고 있습니다.")
     if counts["upscale"]:
-        lines.append(f"세부 묘사를 살리기 위해 해상도 보정을 {counts['upscale']}회 반복하며 윤곽을 또렷하게 다듬었습니다.")
+        lines.append(f"세부 묘사를 살리기 위해 해상도 보정을 {counts['upscale']}회 반복했습니다.")
     if counts["denoise"]:
-        lines.append(f"잡음 정리도 {counts['denoise']}회 진행되어 표정과 배경이 한층 차분해졌습니다.")
+        lines.append(f"잡음 정리 과정도 {counts['denoise']}회 진행되었습니다.")
     lines.append("복원된 이미지를 바라보는 지금, 사진 속 이야기가 현재의 우리에게 말을 건네는 듯합니다.")
     lines.append("이 장면이 전하고 싶은 메시지가 있다면, 그것은 기억을 계속 이어가자는 마음일지도 모릅니다.")
     return "\n\n".join(textwrap.fill(x, width=46) for x in lines)
 
-
-# --- 자동 컬러화(흑백 업로드 시 1회 자동) ---
-def handle_auto_colorization(photo_type: str):
+def handle_auto_colorization(photo_type: str) -> None:
     r = ensure_restoration_state()
     if photo_type != "흑백" or r["counts"]["color"]:
         return
-    original = image_from_bytes(r["current_bytes"])
-    colorized = colorize_image(original)
+    img = image_from_bytes(r["current_bytes"])
+    out = colorize_image(img)
     r["counts"]["color"] += 1
-    bytes_data = image_to_bytes(colorized)
+    add_history_entry("컬러 복원 (자동)", image_to_bytes(out), note="흑백 이미지를 기본 팔레트로 색보정했습니다.")
     r["story"] = None
-    add_history_entry("컬러 복원 (자동)", bytes_data, note="흑백 이미지를 기본 팔레트로 색보정했습니다.")
 
-
-# --- 실행 가능한지 체크(반복 허용시 최대 3회) ---
-def can_run_operation(operation: str, allow_repeat: bool) -> bool:
+def can_run_operation(op: str, allow_repeat: bool) -> bool:
     r = ensure_restoration_state()
-    cnt = r["counts"].get(operation, 0)
+    cnt = r["counts"].get(op, 0)
     return (cnt < 3) if allow_repeat else (cnt == 0)
 
-
-# --- 버튼 액션 ---
-def run_upscale():
-    # hard guard: 재렌더/더블클릭 대비 (고급 옵션 미체크 시 1회 제한)
-    allow_repeat = st.session_state.get('allow_repeat', False)
-    if not can_run_operation('upscale', allow_repeat):
+# ---------- 버튼 액션(하드가드 포함: 고급옵션 OFF면 1회 제한) ----------
+def run_upscale() -> None:
+    allow_repeat = st.session_state.get("allow_repeat", False)
+    if not can_run_operation("upscale", allow_repeat):
         return
     r = ensure_restoration_state()
     img = image_from_bytes(r["current_bytes"])
@@ -1026,11 +989,9 @@ def run_upscale():
     r["story"] = None
     add_history_entry("해상도 업", image_to_bytes(out), note="ESRGAN 대체 알고리즘(샘플)으로 2배 업스케일했습니다.")
 
-
-def run_denoise():
-    # hard guard: 재렌더/더블클릭 대비 (고급 옵션 미체크 시 1회 제한)
-    allow_repeat = st.session_state.get('allow_repeat', False)
-    if not can_run_operation('denoise', allow_repeat):
+def run_denoise() -> None:
+    allow_repeat = st.session_state.get("allow_repeat", False)
+    if not can_run_operation("denoise", allow_repeat):
         return
     r = ensure_restoration_state()
     img = image_from_bytes(r["current_bytes"])
@@ -1039,73 +1000,34 @@ def run_denoise():
     r["story"] = None
     add_history_entry("노이즈 제거", image_to_bytes(out), note="NAFNet 대체 필터(샘플)로 노이즈를 완화했습니다.")
 
-
-def run_story_generation():
+def run_story_generation() -> None:
     r = ensure_restoration_state()
     text = build_story(r["description"], r["counts"], r["photo_type"])
     r["counts"]["story"] += 1
-    r["story"] = {
-        "text": text,
-        "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-        "status": dict(r["counts"]),
-    }
+    r["story"] = {"text": text, "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"), "status": dict(r["counts"])}
 
+# ---------- 섹션 CSS ----------
+st.markdown(
+    """
+    <style>
+    .col-title { text-align:center; margin:0 0 10px; }
+    .img-cap { text-align:center; color:#6b7280; font-size:0.9rem; margin-top:6px; }
+    .history-row { display:flex; gap:16px; overflow-x:auto; padding:4px 2px; }
+    .history-card { flex:0 0 auto; width:280px; border:1px solid #e5e7eb; border-radius:12px; padding:8px; background:#fff; }
+    .history-card img { width:100%; border-radius:8px; display:block; }
+    .history-title { font-weight:700; font-size:0.95rem; margin:6px 0 2px; }
+    .history-meta { color:#6b7280; font-size:0.8rem; }
+    </style>
+    """,
+    unsafe_allow_html=True,
+)
 
-# --- (선택) 섹션용 CSS: 타이틀/리드문 스타일만 최소 추가 ---
-st.markdown("""
-<style>
-.section-title{ font-size:1.85rem; font-weight:800; color:#111827; margin:28px 0 8px; }
-.section-lead{ font-size:1rem; color:#4b5563; margin-bottom:18px; }
-.stButton button{
-  border-radius:12px; padding:10px 16px; font-weight:700; border:none;
-  background:linear-gradient(120deg, #ec4899, #f97316); color:#fff;
-}
-</style>
-""", unsafe_allow_html=True)
-
-# --- 앵커(히어로 버튼이 여기로 스크롤) ---
-# (그대로 유지) 앵커
+# ---------- 앵커 & 제목 ----------
 st.markdown("<div id='restore-app'></div>", unsafe_allow_html=True)
-
-st.markdown("""
-<style>
-.col-title { text-align:center; margin: 0 0 10px; }
-.img-cap { text-align:center; color:#6b7280; font-size:0.9rem; margin-top:6px; }
-.history-row { display:flex; gap:16px; overflow-x:auto; padding:4px 2px; }
-.history-card { flex:0 0 auto; width:280px; border:1px solid #e5e7eb; border-radius:12px; padding:8px; background:#fff; }
-.history-card img { width:100%; border-radius:8px; display:block; }
-.history-title { font-weight:700; font-size:0.95rem; margin:6px 0 2px; }
-.history-meta { color:#6b7280; font-size:0.8rem; }
-</style>
-""", unsafe_allow_html=True)
-
-# 1) CSS: 이 블록을 앵커 다음에 넣기
-st.markdown("""
-<style>
-/* 이 제목만 확실히 잡아 패딩 크게 */
-#restore-title { padding: 10rem 0 10px !important; margin-top: 0 !important; }
-</style>
-""", unsafe_allow_html=True)
-_nick = None
-if "kakao_profile" in st.session_state:
-    try:
-        _nick, _ = extract_profile(st.session_state["kakao_profile"])
-    except Exception:
-        _nick = None
-st.markdown("<div style='height: 10rem'></div>", unsafe_allow_html=True)
-# 2) 제목 렌더링: st.title 대신 아래 한 줄로 교체
 st.markdown("<h1 id='restore-title'>📌 사진 복원 + 스토리 생성</h1>", unsafe_allow_html=True)
 
-st.markdown("<h2 class='section-title'>AI 복원 워크플로우</h2>", unsafe_allow_html=True)
-st.markdown("<p class='section-lead'>업로드 → 복원 옵션 실행 → 스토리 생성까지 한 번에.</p>", unsafe_allow_html=True)
-
-if "kakao_token" in st.session_state:
-    st.success(f"로그인됨: {(_nick or '카카오 사용자')}")
-else:
-    st.info("카카오 로그인을 진행하면 복원 내역이 세션에 보존됩니다. (게스트 모드도 체험 가능)")
-
+# ---------- 업로드 ----------
 rstate = ensure_restoration_state()
-
 with st.container():
     st.subheader("1. 사진 업로드")
     photo_type = st.radio("사진 유형", ["흑백", "컬러"], horizontal=True, key="photo_type_selector")
@@ -1117,14 +1039,13 @@ with st.container():
         digest = hashlib.sha1(file_bytes).hexdigest()
         if rstate["upload_digest"] != digest:
             reset_restoration(digest, file_bytes, photo_type, description, uploaded_file.name)
-            # 업로드 즉시 current_bytes를 원본으로 설정
             ensure_restoration_state()["current_bytes"] = file_bytes
-            # 흑백이면 1회 자동 컬러화
             handle_auto_colorization(photo_type)
         else:
             rstate["description"] = description
             rstate["photo_type"] = photo_type
 
+# ---------- 옵션 ----------
 allow_repeat = st.checkbox("고급 옵션(실험적) - 동일 작업 반복 허용 (최대 3회)", key="allow_repeat")
 if allow_repeat:
     st.warning("⚠ 동일 작업 반복은 처리 시간이 길어지거나 이미지 손상을 유발할 수 있습니다.")
@@ -1143,68 +1064,62 @@ else:
         if st.button("노이즈 제거", key="btn_denoise", use_container_width=True, disabled=not can_dn):
             run_denoise()
     with c3:
-        can_st = can_run_operation("story", allow_repeat)
-        if st.button("스토리 생성", key="btn_story", use_container_width=True, disabled=not can_st):
+        if st.button("스토리 생성", key="btn_story", use_container_width=True):
             run_story_generation()
 
     st.divider()
     col_a, col_b = st.columns(2)
 
     with col_a:
-        st.markdown("<h3 class=\'col-title\'>원본 이미지</h3>", unsafe_allow_html=True)
+        st.markdown("<h3 class='col-title'>원본 이미지</h3>", unsafe_allow_html=True)
         st.image(rstate["original_bytes"], use_container_width=True)
-        st.markdown(f"<div class=\'img-cap\'>{format_status({\"color\":0, \"upscale\":0, \"denoise\":0})}</div>", unsafe_allow_html=
-        True)
+        st.markdown(f"<div class='img-cap'>{format_status({'color':0,'upscale':0,'denoise':0})}</div>", unsafe_allow_html=True)
 
-        with col_b:
-            st.markdown("<h3 class=\'col-title\'>복원 결과</h3>", unsafe_allow_html=True)
-            if rstate["history"]:
-                latest = rstate["history"][-1]
-                st.image(latest["bytes"], use_container_width=True, caption=latest["label"])
-                st.markdown(f"<div class=\'img-cap\'>{format_status(latest[\'status\'])}</div>", unsafe_allow_html=True)
-                if latest.get("note"):
+    with col_b:
+        st.markdown("<h3 class='col-title'>복원 결과</h3>", unsafe_allow_html=True)
+        if rstate["history"]:
+            latest = rstate["history"][-1]
+            st.image(latest["bytes"], use_container_width=True, caption=latest["label"])
+            st.markdown(f"<div class='img-cap'>{format_status(latest['status'])}</div>", unsafe_allow_html=True)
+            if latest.get("note"):
                 st.markdown(f"*{latest['note']}*")
-                else:
-                st.info("아직 수행된 복원 작업이 없습니다.")
+        else:
+            st.info("아직 수행된 복원 작업이 없습니다.")
 
-                if len(rstate["history"]) > 1:
-                with st.expander("전체 작업 히스토리"):
-                    # 파일 이름 기준으로 그룹핑
-                    groups = {}
-                    for e in rstate["history"]:
-                        fname = e.get("file_name") or rstate.get("file_name") or "현재 업로드"
-                        groups.setdefault(fname, []).append(e)
+    # ---------- 전체 작업 히스토리: 파일명 기준 가로 나열 ----------
+    if len(rstate["history"]) > 1:
+        with st.expander("전체 작업 히스토리"):
+            groups: Dict[str, list] = {}
+            for e in rstate["history"]:
+                fname = e.get("file_name") or rstate.get("file_name") or "현재 업로드"
+                groups.setdefault(fname, []).append(e)
 
-                    for fname, entries in groups.items():
-                        st.markdown(f"**{fname}**")
-                        # 가로 스크롤 카드 레이아웃
-                        cards_html = []
-                        for e in entries:
-                            b64 = base64.b64encode(e["bytes"]).decode("ascii")
-                            uri = f"data:image/png;base64,{b64}"
-                            title = e["label"]
-                            meta = f"{e['timestamp']} · {format_status(e['status'])}"
-                            card = f"""
-                <div class="history-card">
-                    <img src="{uri}" alt="{title}"/>
-                    <div class="history-title">{title}</div>
-                    <div class="history-meta">{meta}</div>
-                </div>
-                """
-                            cards_html.append(card)
-                        row_html = "<div class='history-row'>" + "".join(cards_html) + "</div>"
-                        st.markdown(row_html, unsafe_allow_html=True)
+            for fname, entries in groups.items():
+                st.markdown(f"**{fname}**")
+                cards_html = []
+                for e in entries:
+                    b64 = base64.b64encode(e["bytes"]).decode("ascii")
+                    uri = f"data:image/png;base64,{b64}"
+                    title = e["label"]
+                    meta = f"{e['timestamp']} · {format_status(e['status'])}"
+                    card = f"""
+                    <div class="history-card">
+                        <img src="{uri}" alt="{title}"/>
+                        <div class="history-title">{title}</div>
+                        <div class="history-meta">{meta}</div>
+                    </div>
+                    """
+                    cards_html.append(card)
+                row_html = "<div class='history-row'>" + "".join(cards_html) + "</div>"
+                st.markdown(row_html, unsafe_allow_html=True)
 
-        if rstate.get("story"):
-            st.subheader("스토리")
-            info = rstate["story"]
-            st.markdown(info["text"])
-            st.caption(f"생성 시각: {info['timestamp']} / {format_status(info['status'])}")
+    # ---------- 스토리 ----------
+    if rstate.get("story"):
+        st.subheader("스토리")
+        info = rstate["story"]
+        st.markdown(info["text"])
+        st.caption(f"생성 시각: {info['timestamp']} / {format_status(info['status'])}")
 
-    st.markdown("---")
-    st.caption("*DeOldify, ESRGAN, NAFNet 등의 실제 모델 연동을 위한 자리 표시자입니다(현재는 샘플 필터).*")
-    st.markdown("<div style='height: 8rem'></div>", unsafe_allow_html=True)
-    # ====================[ 추가 블록 끝 ]====================
-
-    # --- Anchor at the very bottom ---
-    st.markdown("<div id='page-bottom'></div>", unsafe_allow_html=True)
+st.markdown("---")
+st.caption("*DeOldify, ESRGAN, NAFNet 등의 실제 모델 연동을 위한 자리 표시자입니다(현재는 샘플 필터).*")
+# =====================[ 추가 블록 끝 ]====================
