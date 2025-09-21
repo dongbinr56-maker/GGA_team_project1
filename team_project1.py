@@ -726,44 +726,49 @@ with st.container():
                 st.markdown(f"""
                 <style>
                 section[data-testid="stSidebar"] {{
-                    width: 300px !important;
+                    width: 320px !important;
                     background-color: #f9f9f9;
-                    padding-top: 20px;
+                    padding: 15px;
                 }}
-                .sidebar-top {{
-                    text-align: center;
+                .sidebar-row {{
+                    display: flex;
+                    align-items: center;
+                    justify-content: space-between;
+                    gap: 10px;
                 }}
-                .sidebar-top img {{
+                .sidebar-row img {{
                     border-radius: 50%;
-                    width: 80px;          /* 프로필 사이즈 줄임 */
-                    height: 80px;
+                    width: 50px;
+                    height: 50px;
                     object-fit: cover;
-                    margin-bottom: 8px;
-                    box-shadow: 0 2px 6px rgba(0,0,0,0.2);
                 }}
-                .sidebar-top h3 {{
+                .sidebar-row h3 {{
                     font-size: 1rem;
                     font-weight: 600;
-                    margin-bottom: 10px;
+                    margin: 0;
+                    flex-grow: 1;
+                    text-align: left;
                 }}
-                .sidebar-top .stButton > button {{
-                    width: 100px;
-                    margin: 0 auto;
-                    display: block;
+                .sidebar-row .stButton>button {{
+                    padding: 4px 12px;
+                    font-size: 0.9rem;
                 }}
                 </style>
 
-                <div class="sidebar-top">
+                <div class="sidebar-row">
                     <img src="{img}" alt="profile"/>
-                    <h3>{nickname}님 환영합니다 👋</h3>
+                    <h3>{nickname}</h3>
                 </div>
                 """, unsafe_allow_html=True)
 
-                # ===== 로그아웃 버튼 =====
-                if st.button("로그아웃", key="logout_btn"):
-                    st.session_state.pop("kakao_token", None)
-                    st.session_state.pop("kakao_profile", None)
-                    st.rerun()
+                # 로그아웃 버튼만 따로 옆에 붙여주기
+                col1, col2, col3 = st.columns([0.2, 0.6, 0.2])
+                with col3:
+                    if st.button("로그아웃", key="logout_btn"):
+                        st.session_state.pop("kakao_token", None)
+                        st.session_state.pop("kakao_profile", None)
+                        st.rerun()
+
 
 
 
