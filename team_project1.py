@@ -24,7 +24,7 @@ from urllib.parse import urlencode, parse_qs, urlparse
 #  - layout="wide": 가로 폭 넓게
 #  - 사이드바는 기본 접힘 상태
 # ------------------------------
-
+st.set_page_config(layout="wide", initial_sidebar_state="collapsed")
 # ================================
 # Kakao OAuth 설정
 # ================================
