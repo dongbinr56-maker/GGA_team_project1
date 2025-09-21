@@ -991,6 +991,12 @@ st.markdown("""
 # --- 앵커(히어로 버튼이 여기로 스크롤) ---
 st.markdown("<div id='restore-app'></div>", unsafe_allow_html=True)
 
+st.markdown("""
+<style>
+/* 복원 섹션 시작(#restore-app) '이후'에 나오는 첫 h1에도 적용됨 */
+#restore-app ~ div h1 { padding: 10rem 0 10px !important; }
+</style>
+""", unsafe_allow_html=True)
 
 # --- 안내(로그인 상태 문구: nickname 안전 처리) ---
 _nick = None
@@ -1002,13 +1008,6 @@ if "kakao_profile" in st.session_state:
 
 # --- 본문 UI: 업로드 → 옵션 → 결과/히스토리/스토리 ---
 st.title("📌 사진 복원 + 스토리 생성")
-st.markdown("""
-<style>
-/* 복원 섹션 시작(#restore-app) '이후'에 나오는 첫 h1에도 적용됨 */
-#restore-app ~ div h1 { padding: 18rem 0 10px !important; }
-</style>
-""", unsafe_allow_html=True)
-
 st.markdown("<h2 class='section-title'>AI 복원 워크플로우</h2>", unsafe_allow_html=True)
 st.markdown("<p class='section-lead'>업로드 → 복원 옵션 실행 → 스토리 생성까지 한 번에.</p>", unsafe_allow_html=True)
 
