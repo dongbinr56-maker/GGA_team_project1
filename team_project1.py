@@ -733,41 +733,43 @@ with st.container():
                 .sidebar-row {{
                     display: flex;
                     align-items: center;
-                    justify-content: space-between;
-                    gap: 10px;
+                    justify-content: flex-start;
+                    gap: 12px;
                 }}
                 .sidebar-row img {{
                     border-radius: 50%;
-                    width: 50px;
-                    height: 50px;
+                    width: 40px;
+                    height: 40px;
                     object-fit: cover;
                 }}
-                .sidebar-row h3 {{
+                .sidebar-row span {{
                     font-size: 1rem;
                     font-weight: 600;
-                    margin: 0;
-                    flex-grow: 1;
-                    text-align: left;
                 }}
-                .sidebar-row .stButton>button {{
-                    padding: 4px 12px;
-                    font-size: 0.9rem;
+                .sidebar-row button {{
+                    margin-left: auto;
+                    padding: 4px 10px;
+                    border: 1px solid #ccc;
+                    border-radius: 6px;
+                    background-color: white;
+                    cursor: pointer;
                 }}
                 </style>
 
                 <div class="sidebar-row">
                     <img src="{img}" alt="profile"/>
-                    <h3>{nickname}</h3>
+                    <span>{nickname}</span>
+                    <form action="#" method="post">
+                        <button type="submit">로그아웃</button>
+                    </form>
                 </div>
                 """, unsafe_allow_html=True)
 
-                # 로그아웃 버튼만 따로 옆에 붙여주기
-                col1, col2, col3 = st.columns([0.2, 0.6, 0.2])
-                with col3:
-                    if st.button("로그아웃", key="logout_btn"):
-                        st.session_state.pop("kakao_token", None)
-                        st.session_state.pop("kakao_profile", None)
-                        st.rerun()
+                # 실제 로그아웃 동작 연결
+                if st.button("로그아웃", key="logout_btn", help="위 HTML 버튼과 기능 동일"):
+                    st.session_state.pop("kakao_token", None)
+                    st.session_state.pop("kakao_profile", None)
+                    st.rerun()
 
 
 
