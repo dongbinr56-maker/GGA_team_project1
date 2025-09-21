@@ -739,75 +739,7 @@ with st.container():
     with left_col:
         # 로그인 성공 여부 확인
         if "kakao_profile" in st.session_state:
-            # ===== Hero 영역 (로그인 시 버튼 감춤) =====
-            st.markdown(
-                '<div class="left-stack">'
-                '<div class="hero-title">오래된 사진 복원 :<br> <span class="em">AI로 온라인 사진 복원</span></div>'
-                '<div class="hero-sub">바랜 사진 속 미소가 다시 빛나고, 잊힌 장면들이 생생하게 살아납니다.</div>'
-                '</div>',
-                unsafe_allow_html=True
-            )
-
-            with st.sidebar:
-                profile = st.session_state["kakao_profile"]
-                nickname, img = extract_profile(profile)
-
-                st.markdown(f"""
-                <style>
-
-                section[data-testid="stSidebar"] {{
-                    width: 320px !important;
-                    background-color: #f9f9f9;
-                    padding: 1px 3px 15px 15px; /* 위쪽 패딩 줄임 */
-                }}
-                .sidebar-row {{
-                    display: flex;
-                    align-items: center;
-                    gap: 12px;
-                    margin-top: 0;   /* 위쪽 여백 제거 */
-                }}
-                .sidebar-row img {{
-                    border-radius: 50%;
-                    width: 40px;
-                    height: 40px;
-                    object-fit: cover;
-                }}
-                .sidebar-row span {{
-                    font-size: 1rem;
-                    font-weight: 600;
-                }}
-                .sidebar-row button {{
-                    margin-left: auto;
-                    padding: 2px 8px;      /* 버튼 패딩 줄임 */
-                    font-size: 0.8rem;     /* 글자 크기 줄임 */
-                    border: 1px solid #ccc;
-                    border-radius: 4px;    /* 둥근 모서리 작게 */
-                    background-color: white;
-                    cursor: pointer;
-                }}
-                </style>
-
-                <div class="sidebar-row">
-                    <img src="{img}" alt="profile"/>
-                    <span>{nickname}</span>
-                    <form action="?logout=1" method="get">
-                        <button type="submit">로그아웃</button>
-                    </form>
-                </div>
-                """, unsafe_allow_html=True)
-
-                # 쿼리 파라미터 확인해서 로그아웃 처리
-                query_params = st.query_params
-                if "logout" in query_params:
-                    st.session_state.pop("kakao_token", None)
-                    st.session_state.pop("kakao_profile", None)
-                    st.rerun()
-
-
-
-
-        else:
-            # (로그인 성공 분기 inside: with left_col:)
+            # ===== 로그인됨: CTA 한 개(이미지 복원하러 가기!) =====
             st.markdown(
                 '''
                 <div class="left-stack">
@@ -821,7 +753,29 @@ with st.container():
                 unsafe_allow_html=True
             )
 
-            # ===== 로그인 전엔 사이드바 숨김 =====
+            # (사이드바 프로필 영역은 기존 그대로 유지)
+            with st.sidebar:
+                profile = st.session_state["kakao_profile"]
+                nickname, img = extract_profile(profile)
+                ...
+        else:
+            # ===== 로그인 전: 카카오 + 게스트 두 버튼 =====
+            login_url = build_auth_url()
+            st.markdown(
+                f'''
+                <div class="left-stack">
+                    <div class="hero-title">오래된 사진 복원 :<br> <span class="em">AI로 온라인 사진 복원</span></div>
+                    <div class="hero-sub">바랜 사진 속 미소가 다시 빛나고, 잊힌 장면들이 생생하게 살아납니다.</div>
+                    <div class="btn-wrap">
+                        <a href="{login_url}" class="kakao-btn cta-btn" role="button">카카오 계정으로 계속</a>
+                        <a href="#page-bottom" class="guest-btn cta-btn" role="button">게스트 모드로 먼저 체험하기</a>
+                    </div>
+                </div>
+                ''',
+                unsafe_allow_html=True
+            )
+
+            # 로그인 전엔 사이드바 숨김 (기존 유지)
             st.markdown("""
             <style>
             [data-testid="stSidebar"]{ display:none !important; }
@@ -1129,15 +1083,12 @@ else:
     if rstate.get("story"):
         st.subheader("스토리")
         info = rstate["story"]
-        st.markdown(info["text"])
-        st.caption(f"생성 시각: {info['timestamp']} / {format_status(info['status'])}")
 
-        # ✅ 가로 정렬 섹션(스토리/원본/복원) - 맨 아래 앵커
+        # 맨 아래 스크롤 앵커
         st.markdown('<div id="story-bottom"></div>', unsafe_allow_html=True)
 
         import base64, html
 
-        # 원본/복원 이미지 준비 (복원 없으면 current/원본으로 fallback)
         orig_bytes = rstate["original_bytes"]
         last_bytes = (rstate["history"][-1]["bytes"] if rstate["history"] else rstate["current_bytes"] or orig_bytes)
 
@@ -1166,7 +1117,7 @@ else:
           .story-img .dl {{ margin-top:6px; font-size:.9rem; color:#6b7280; }}
         </style>
         <div class="story-lane">
-          <div class="story-card">{html.escape(info["text"]).replace("\n", "<br>")}</div>
+          <div class="story-card">{html.escape(info["text"]).replace("\\n", "<br>")}</div>
           <a class="story-img" href="data:image/png;base64,{b64_orig}" download="{dn_orig}">
             <img src="data:image/png;base64,{b64_orig}" alt="원본 이미지"/>
             <div class="dl">원본 다운로드</div>
@@ -1178,6 +1129,7 @@ else:
         </div>
         """
         st.markdown(lane_html, unsafe_allow_html=True)
+
 if st.session_state.get("scroll_to_story"):
     st.markdown("""
     <script>
