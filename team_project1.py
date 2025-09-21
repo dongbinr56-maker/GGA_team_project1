@@ -1001,7 +1001,7 @@ st.markdown("""
 }
 </style>
 """, unsafe_allow_html=True)
-
+st.markdown("<div style='height: 10rem'></div>", unsafe_allow_html=True)
 # ⬇️ st.title 말고 h1로 렌더(이 id를 잡아서 위 CSS가 100% 먹힘)
 st.markdown("<h1 id='restore-title'>📌 사진 복원 + 스토리 생성</h1>", unsafe_allow_html=True)
 
