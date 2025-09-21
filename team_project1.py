@@ -714,6 +714,10 @@ with st.container():
         if "kakao_profile" in st.session_state:
             # ===== 로그인 상태일 때: 버튼 감춤 =====
             st.markdown(
+            '<style '
+            '[data - testid = "stSidebar"]{display: block !important;}'
+            '[data - testid = "collapsedControl"]{display: block !important;}'
+            '</style>'
                 '<div class="left-stack">'
                 '<div class="hero-title">오래된 사진 복원 :<br> <span class="em">AI로 온라인 사진 복원</span></div>'
                 '<div class="hero-sub">바랜 사진 속 미소가 다시 빛나고, 잊힌 장면들이 생생하게 살아납니다.</div>'
@@ -740,6 +744,10 @@ with st.container():
             st.markdown(
                 f"""
                 <div class="left-stack">
+                    <style>
+                      [data-testid="stSidebar"]{{ display:none !important; }}
+                      [data-testid="collapsedControl"]{{ display:none !important; }}
+                    </style>
                     <div class="hero-title">오래된 사진 복원 :<br> <span class="em">AI로 온라인 사진 복원</span></div>
                     <div class="hero-sub">바랜 사진 속 미소가 다시 빛나고, 잊힌 장면들이 생생하게 살아납니다.</div>
                     <div class="btn-wrap">
