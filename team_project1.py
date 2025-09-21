@@ -733,7 +733,6 @@ with st.container():
                 .sidebar-row {{
                     display: flex;
                     align-items: center;
-                    justify-content: flex-start;
                     gap: 12px;
                 }}
                 .sidebar-row img {{
@@ -759,14 +758,15 @@ with st.container():
                 <div class="sidebar-row">
                     <img src="{img}" alt="profile"/>
                     <span>{nickname}</span>
-                    <form action="#" method="post">
+                    <form action="?logout=1" method="get">
                         <button type="submit">로그아웃</button>
                     </form>
                 </div>
                 """, unsafe_allow_html=True)
 
-                # 실제 로그아웃 동작 연결
-                if st.button("로그아웃", key="logout_btn", help="위 HTML 버튼과 기능 동일"):
+                # 쿼리 파라미터 확인해서 로그아웃 처리
+                query_params = st.query_params
+                if "logout" in query_params:
                     st.session_state.pop("kakao_token", None)
                     st.session_state.pop("kakao_profile", None)
                     st.rerun()
