@@ -1103,13 +1103,13 @@ else:
                     uri = f"data:image/png;base64,{b64}"
                     title = e["label"]
                     meta = f"{e['timestamp']} · {format_status(e['status'])}"
-                    card = f"""
-                    <div class="history-card">
-                        <img src="{uri}" alt="{title}"/>
-                        <div class="history-title">{title}</div>
-                        <div class="history-meta">{meta}</div>
-                    </div>
-                    """
+                    card = (
+    '<div class="history-card">'
+    f'<img src="{uri}" alt="{title}"/>'
+    f'<div class="history-title">{title}</div>'
+    f'<div class="history-meta">{meta}</div>'
+    '</div>'
+)
                     cards_html.append(card)
                 row_html = "<div class='history-row'>" + "".join(cards_html) + "</div>"
                 st.markdown(row_html, unsafe_allow_html=True)
