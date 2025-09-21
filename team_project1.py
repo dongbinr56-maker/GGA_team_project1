@@ -1103,13 +1103,11 @@ else:
                     uri = f"data:image/png;base64,{b64}"
                     title = e["label"]
                     meta = f"{e['timestamp']} · {format_status(e['status'])}"
-                    card = (
-    '<div class="history-card">'
-    f'<img src="{uri}" alt="{title}"/>'
-    f'<div class="history-title">{title}</div>'
-    f'<div class="history-meta">{meta}</div>'
-    '</div>'
-)
+                    card = ('<div class="history-card">'
+                           f'<img src="{uri}" alt="{title}"/>'
+                           f'<div class="history-title">{title}</div>'
+                           f'<div class="history-meta">{meta}</div>'
+                           '</div>')
                     cards_html.append(card)
                 row_html = "<div class='history-row'>" + "".join(cards_html) + "</div>"
                 st.markdown(row_html, unsafe_allow_html=True)
@@ -1123,7 +1121,7 @@ else:
 
 st.markdown("---")
 st.caption("*DeOldify, ESRGAN, NAFNet 등의 실제 모델 연동을 위한 자리 표시자입니다(현재는 샘플 필터).*")
-st.markdown("<div style='height: 8rem'></div>", unsafe_allow_html=True)
+st.markdown("<div style='height: 15rem'></div>", unsafe_allow_html=True)
 
 # =====================[ 추가 블록 끝 ]====================
 st.markdown("<div id='page-bottom'></div>", unsafe_allow_html=True)
