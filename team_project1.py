@@ -48,6 +48,18 @@ if st.button("카카오 계정으로 계속"):
     }
     kakao_login_url = f"{KAKAO_AUTH_URL}?{urlencode(params)}"
 
+    st.markdown(
+        f"""
+        <div class="btn-wrap">
+            <a href="{kakao_login_url}">
+              <button class="kakao-btn">카카오 계정으로 계속</button>
+            </a>
+            <button class="guest-btn">게스트 모드로 먼저 체험하기</button>
+        </div>
+        """,
+        unsafe_allow_html=True
+    )
+
 # ================================
 # Redirect 콜백 처리 (신규 API 반영)
 # ================================
