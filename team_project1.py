@@ -719,64 +719,62 @@ with st.container():
                 unsafe_allow_html=True
             )
 
-            # ===== 사이드바 헤더 커스터마이징 =====
-            profile = st.session_state["kakao_profile"]
-            nickname, img = extract_profile(profile)
+            with st.sidebar:
+                profile = st.session_state["kakao_profile"]
+                nickname, img = extract_profile(profile)
 
-            st.markdown(f"""
-            <style>
-            /* 사이드바 헤더 전체 덮어쓰기 */
-            div[data-testid="stSidebarHeader"] {{
-                display: flex !important;
-                align-items: center !important;
-                justify-content: flex-start !important;
-                gap: 10px;
-                padding: 6px 10px;
-                background-color: #f9f9f9;
-                border-bottom: 1px solid #eee;
-            }}
+                st.markdown(f"""
+                <style>
+                section[data-testid="stSidebar"] {{
+                    width: 320px !important;
+                    background-color: #f9f9f9;
+                    padding: 1px 3px 15px 15px; /* 위쪽 패딩 줄임 */
+                }}
+                .sidebar-row {{
+                    display: flex;
+                    align-items: center;
+                    gap: 12px;
+                    margin-top: 0;   /* 위쪽 여백 제거 */
+                }}
+                .sidebar-row img {{
+                    border-radius: 50%;
+                    width: 40px;
+                    height: 40px;
+                    object-fit: cover;
+                }}
+                .sidebar-row span {{
+                    font-size: 1rem;
+                    font-weight: 600;
+                }}
+                .sidebar-row button {{
+                    margin-left: auto;
+                    padding: 2px 8px;      /* 버튼 패딩 줄임 */
+                    font-size: 0.8rem;     /* 글자 크기 줄임 */
+                    border: 1px solid #ccc;
+                    border-radius: 4px;    /* 둥근 모서리 작게 */
+                    background-color: white;
+                    cursor: pointer;
+                }}
+                </style>
 
-            /* 프로필 이미지 */
-            div[data-testid="stSidebarHeader"] img {{
-                border-radius: 50%;
-                width: 32px;
-                height: 32px;
-                object-fit: cover;
-            }}
+                <div class="sidebar-row">
+                    <img src="{img}" alt="profile"/>
+                    <span>{nickname}</span>
+                    <form action="?logout=1" method="get">
+                        <button type="submit">로그아웃</button>
+                    </form>
+                </div>
+                """, unsafe_allow_html=True)
 
-            /* 닉네임 */
-            div[data-testid="stSidebarHeader"] span {{
-                font-size: 0.9rem;
-                font-weight: 600;
-                flex-grow: 1;
-            }}
+                # 쿼리 파라미터 확인해서 로그아웃 처리
+                query_params = st.query_params
+                if "logout" in query_params:
+                    st.session_state.pop("kakao_token", None)
+                    st.session_state.pop("kakao_profile", None)
+                    st.rerun()
 
-            /* 로그아웃 버튼 */
-            div[data-testid="stSidebarHeader"] button {{
-                padding: 2px 6px;
-                font-size: 0.75rem;
-                border: 1px solid #ccc;
-                border-radius: 4px;
-                background-color: white;
-                cursor: pointer;
-            }}
-            </style>
 
-            <div data-testid="stSidebarHeader">
-                <img src="{img}" alt="profile"/>
-                <span>{nickname}</span>
-                <form action="?logout=1" method="get">
-                    <button type="submit">로그아웃</button>
-                </form>
-            </div>
-            """, unsafe_allow_html=True)
 
-            # ===== 로그아웃 처리 =====
-            query_params = st.query_params
-            if "logout" in query_params:
-                st.session_state.pop("kakao_token", None)
-                st.session_state.pop("kakao_profile", None)
-                st.rerun()
 
         else:
             # ===== 로그인 전: 버튼 보이기 =====
@@ -804,7 +802,7 @@ with st.container():
             </style>
             """, unsafe_allow_html=True)
 
+
     with right_col:
         render_compare(before_b64, after_b64, start=50, height_px=hero_h)
-
 
