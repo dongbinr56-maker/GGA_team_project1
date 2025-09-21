@@ -892,6 +892,8 @@ def ensure_restoration_state() -> Dict:
             "counts": {"color": 0, "upscale": 0, "denoise": 0, "story": 0},
             "history": [],
             "story": None,
+            "file_name": file_name,
+            "file_name": None,
         }
     return st.session_state.restoration
 
@@ -949,13 +951,14 @@ def add_history_entry(label: str, image_bytes: bytes, note: Optional[str] = None
         "bytes": image_bytes,
         "status": dict(r["counts"]),
         "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "file_name": r.get("file_name"),
         "note": note,
     }
     r["history"].append(entry)
     r["current_bytes"] = image_bytes
 
 
-def reset_restoration(upload_digest: str, original_bytes: bytes, photo_type: str, description: str):
+def reset_restoration(upload_digest: str, original_bytes: bytes, photo_type: str, description: str, file_name: str):
     r = ensure_restoration_state()
     r.update(
         {
@@ -1064,6 +1067,18 @@ st.markdown("""
 # (그대로 유지) 앵커
 st.markdown("<div id='restore-app'></div>", unsafe_allow_html=True)
 
+st.markdown("""
+<style>
+.col-title { text-align:center; margin: 0 0 10px; }
+.img-cap { text-align:center; color:#6b7280; font-size:0.9rem; margin-top:6px; }
+.history-row { display:flex; gap:16px; overflow-x:auto; padding:4px 2px; }
+.history-card { flex:0 0 auto; width:280px; border:1px solid #e5e7eb; border-radius:12px; padding:8px; background:#fff; }
+.history-card img { width:100%; border-radius:8px; display:block; }
+.history-title { font-weight:700; font-size:0.95rem; margin:6px 0 2px; }
+.history-meta { color:#6b7280; font-size:0.8rem; }
+</style>
+""", unsafe_allow_html=True)
+
 # 1) CSS: 이 블록을 앵커 다음에 넣기
 st.markdown("""
 <style>
@@ -1101,7 +1116,7 @@ with st.container():
         file_bytes = uploaded_file.getvalue()
         digest = hashlib.sha1(file_bytes).hexdigest()
         if rstate["upload_digest"] != digest:
-            reset_restoration(digest, file_bytes, photo_type, description)
+            reset_restoration(digest, file_bytes, photo_type, description, uploaded_file.name)
             # 업로드 즉시 current_bytes를 원본으로 설정
             ensure_restoration_state()["current_bytes"] = file_bytes
             # 흑백이면 1회 자동 컬러화
@@ -1136,41 +1151,60 @@ else:
     col_a, col_b = st.columns(2)
 
     with col_a:
-        st.subheader("원본 이미지")
+        st.markdown("<h3 class=\'col-title\'>원본 이미지</h3>", unsafe_allow_html=True)
         st.image(rstate["original_bytes"], use_container_width=True)
-        st.caption(format_status({"color": 0, "upscale": 0, "denoise": 0}))
+        st.markdown(f"<div class=\'img-cap\'>{format_status({\"color\":0, \"upscale\":0, \"denoise\":0})}</div>", unsafe_allow_html=
+        True)
 
-    with col_b:
-        st.subheader("복원 결과")
-        if rstate["history"]:
-            latest = rstate["history"][-1]
-            st.image(latest["bytes"], use_container_width=True, caption=latest["label"])
-            st.caption(format_status(latest["status"]))
-            if latest.get("note"):
+        with col_b:
+            st.markdown("<h3 class=\'col-title\'>복원 결과</h3>", unsafe_allow_html=True)
+            if rstate["history"]:
+                latest = rstate["history"][-1]
+                st.image(latest["bytes"], use_container_width=True, caption=latest["label"])
+                st.markdown(f"<div class=\'img-cap\'>{format_status(latest[\'status\'])}</div>", unsafe_allow_html=True)
+                if latest.get("note"):
                 st.markdown(f"*{latest['note']}*")
-        else:
-            st.info("아직 수행된 복원 작업이 없습니다.")
+                else:
+                st.info("아직 수행된 복원 작업이 없습니다.")
 
-    if len(rstate["history"]) > 1:
-        with st.expander("전체 작업 히스토리"):
-            for idx, entry in enumerate(rstate["history"], 1):
-                st.markdown(f"**{idx}. {entry['label']}** ({entry['timestamp']})")
-                st.image(entry["bytes"], use_container_width=True)
-                st.caption(format_status(entry["status"]))
-                if entry.get("note"):
-                    st.write(entry["note"])
-                st.markdown("---")
+                if len(rstate["history"]) > 1:
+                with st.expander("전체 작업 히스토리"):
+                    # 파일 이름 기준으로 그룹핑
+                    groups = {}
+                    for e in rstate["history"]:
+                        fname = e.get("file_name") or rstate.get("file_name") or "현재 업로드"
+                        groups.setdefault(fname, []).append(e)
 
-    if rstate.get("story"):
-        st.subheader("스토리")
-        info = rstate["story"]
-        st.markdown(info["text"])
-        st.caption(f"생성 시각: {info['timestamp']} / {format_status(info['status'])}")
+                    for fname, entries in groups.items():
+                        st.markdown(f"**{fname}**")
+                        # 가로 스크롤 카드 레이아웃
+                        cards_html = []
+                        for e in entries:
+                            b64 = base64.b64encode(e["bytes"]).decode("ascii")
+                            uri = f"data:image/png;base64,{b64}"
+                            title = e["label"]
+                            meta = f"{e['timestamp']} · {format_status(e['status'])}"
+                            card = f"""
+                <div class="history-card">
+                    <img src="{uri}" alt="{title}"/>
+                    <div class="history-title">{title}</div>
+                    <div class="history-meta">{meta}</div>
+                </div>
+                """
+                            cards_html.append(card)
+                        row_html = "<div class='history-row'>" + "".join(cards_html) + "</div>"
+                        st.markdown(row_html, unsafe_allow_html=True)
 
-st.markdown("---")
-st.caption("*DeOldify, ESRGAN, NAFNet 등의 실제 모델 연동을 위한 자리 표시자입니다(현재는 샘플 필터).*")
-st.markdown("<div style='height: 8rem'></div>", unsafe_allow_html=True)
-# ====================[ 추가 블록 끝 ]====================
+        if rstate.get("story"):
+            st.subheader("스토리")
+            info = rstate["story"]
+            st.markdown(info["text"])
+            st.caption(f"생성 시각: {info['timestamp']} / {format_status(info['status'])}")
 
-# --- Anchor at the very bottom ---
-st.markdown("<div id='page-bottom'></div>", unsafe_allow_html=True)
+    st.markdown("---")
+    st.caption("*DeOldify, ESRGAN, NAFNet 등의 실제 모델 연동을 위한 자리 표시자입니다(현재는 샘플 필터).*")
+    st.markdown("<div style='height: 8rem'></div>", unsafe_allow_html=True)
+    # ====================[ 추가 블록 끝 ]====================
+
+    # --- Anchor at the very bottom ---
+    st.markdown("<div id='page-bottom'></div>", unsafe_allow_html=True)
