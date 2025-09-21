@@ -47,7 +47,6 @@ if st.button("카카오 계정으로 계속"):
         "state": STATE_SECRET,
     }
     kakao_login_url = f"{KAKAO_AUTH_URL}?{urlencode(params)}"
-    st.markdown(f"[👉 카카오 로그인]({kakao_login_url})", unsafe_allow_html=True)
 
 # ================================
 # Redirect 콜백 처리 (신규 API 반영)
