@@ -7,6 +7,9 @@
 # - 이미지 경로: ./assets/before.jpg, ./assets/after.jpg  ← 직접 교체해서 사용
 # ============================================================
 
+from typing import Tuple
+
+import streamlit.components.v1 as components
 import base64
 import io
 import os
@@ -14,16 +17,15 @@ import time
 import hmac
 import hashlib
 import secrets
-from datetime import datetime
 from pathlib import Path
-from typing import Dict, Optional
 
 import requests
 import streamlit as st
-from PIL import Image, ImageFilter, ImageOps
-import textwrap
+from PIL import Image
 
 import warnings
+
+warnings.filterwarnings("ignore", category=DeprecationWarning)
 
 # ------------------------------
 # [설정] 페이지 레이아웃
@@ -207,7 +209,7 @@ def pil_to_data_uri(img: Image.Image, fmt: str = "JPEG", quality: int = 90) -> s
 #  - 너무 큰 이미지는 성능/메모리 고려해서 폭을 제한
 #  - 반환: (before_img, after_img, 추천_높이_px)
 # ------------------------------
-def load_examples(max_width: int = 300) -> Tuple[Image.Image, Image.Image, int]:
+def load_examples(max_width: int = 300):
     if not BEFORE_PATH.exists() or not AFTER_PATH.exists():
         st.error("예시 이미지가 없습니다. before.jpg, after.jpg 를 넣어주세요.")
         st.stop()
