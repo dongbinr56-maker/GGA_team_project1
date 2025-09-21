@@ -440,14 +440,14 @@ html, body, [class*="css"] {
 }
 
 /* 각 글자 딜레이 */
-.main-title span:nth-child(1){ animation-delay: 0.1s; }
-.main-title span:nth-child(2){ animation-delay: 0.3s; }
-.main-title span:nth-child(3){ animation-delay: 0.5s; }
-.main-title span:nth-child(4){ animation-delay: 0.7s; }
-.main-title span:nth-child(5){ animation-delay: 0.9s; }
-.main-title span:nth-child(6){ animation-delay: 1.1s; }
+.main-title span:nth-child(1){ animation-delay: 0.3s; }
+.main-title span:nth-child(2){ animation-delay: 0.5s; }
+.main-title span:nth-child(3){ animation-delay: 0.7s; }
+.main-title span:nth-child(4){ animation-delay: 0.9s; }
+.main-title span:nth-child(5){ animation-delay: 1.1s; }
 .main-title span:nth-child(6){ animation-delay: 1.3s; }
-.main-title span:nth-child(1){ animation-delay: 0.1s; }
+.main-title span:nth-child(7){ animation-delay: 1.5s; }
+.main-title span:nth-child(1){ animation-delay: 0.3s; }
 
 /* ✅ Hero 섹션 */
 .hero-wrap {
