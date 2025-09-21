@@ -446,6 +446,8 @@ html, body, [class*="css"] {
 .main-title span:nth-child(4){ animation-delay: 0.7s; }
 .main-title span:nth-child(5){ animation-delay: 0.9s; }
 .main-title span:nth-child(6){ animation-delay: 1.1s; }
+.main-title span:nth-child(6){ animation-delay: 1.3s; }
+.main-title span:nth-child(1){ animation-delay: 0.1s; }
 
 /* ✅ Hero 섹션 */
 .hero-wrap {
@@ -461,12 +463,14 @@ html, body, [class*="css"] {
 """, unsafe_allow_html=True)
 st.markdown("""
 <div class="main-title">
+  <span>"</span>
   <span>복</span>
   <span>원</span>
   <span>이</span>
   <span> </span>
   <span>되</span>
   <span>.</span>
+  <span>"</span>
 </div>
 """, unsafe_allow_html=True)
 st.markdown("""
