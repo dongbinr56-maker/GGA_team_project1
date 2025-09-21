@@ -1117,7 +1117,7 @@ else:
           .story-img .dl {{ margin-top:6px; font-size:.9rem; color:#6b7280; }}
         </style>
         <div class="story-lane">
-          <div class="story-card">{html.escape(info["text"]).replace("\\n", "<br>")}</div>
+          <div class="story-card">{html.escape(info["text"]).replace("\n", "<br>")}</div>
           <a class="story-img" href="data:image/png;base64,{b64_orig}" download="{dn_orig}">
             <img src="data:image/png;base64,{b64_orig}" alt="원본 이미지"/>
             <div class="dl">원본 다운로드</div>
