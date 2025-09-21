@@ -260,86 +260,86 @@ html_code = f"""
   <base target="_top">
   <title>사진 복원 + 스토리 생성 (Kakao OAuth)</title>
   <style>
-    :root{{{{
+    :root{{
       --pink:#ec4899; --text-strong:#111827; --text-muted:#4b5563; --card:#ffffff;
       --shadow:0 24px 60px -34px rgba(15,23,42,0.35); --radius:28px; --ease:cubic-bezier(.2,.8,.2,1);
-    }}}}
-    *{{{{box-sizing:border-box}}}}
-    body{{{{ margin:0; font-family: ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Apple Color Emoji,Segoe UI Emoji; background:transparent; }}}}
-    a{{{{color:inherit;text-decoration:none}}}} button{{{{font-family:inherit}}}}
+    }}
+    *{{box-sizing:border-box}}
+    body{{ margin:0; font-family: ui-sans-serif,system-ui,-apple-system,Segoe UI,Roboto,Apple Color Emoji,Segoe UI Emoji; background:transparent; }}
+    a{{color:inherit;text-decoration:none}} button{{font-family:inherit}}
 
-    .navbar{{{{ position:fixed; top:0; left:0; right:0; height:60px; display:flex; align-items:center; justify-content:space-between;
-             padding:0 18px; background:#fff; box-shadow:0 2px 6px rgba(0,0,0,0.08); z-index:1000; }}}}
-    .brand{{{{ font-weight:800; letter-spacing:0.1px; }}}}
+    .navbar{{ position:fixed; top:0; left:0; right:0; height:60px; display:flex; align-items:center; justify-content:space-between;
+             padding:0 18px; background:#fff; box-shadow:0 2px 6px rgba(0,0,0,0.08); z-index:1000; }}
+    .brand{{ font-weight:800; letter-spacing:0.1px; }}
 
-    .hero-wrap{{{{ margin-top:80px; }}}}
-    .hero-card{{{{ background: linear-gradient(135deg, rgba(255, 220, 237, 0.65), rgba(255,255,255,0.96) 65%);
+    .hero-wrap{{ margin-top:80px; }}
+    .hero-card{{ background: linear-gradient(135deg, rgba(255, 220, 237, 0.65), rgba(255,255,255,0.96) 65%);
                 border:1px solid rgba(255,255,255,0.7); border-radius:var(--radius); box-shadow:var(--shadow);
-                padding:32px; max-width:1280px; margin:0 auto; position:relative; }}}}
-    .hero-inner{{{{ display:grid; grid-template-columns: minmax(0,1.05fr) minmax(0,1fr); gap:52px; align-items:center; }}}}
-    @media (max-width: 1100px){{{{ .hero-inner{{{{ grid-template-columns: 1fr; }}}} }}}}
+                padding:32px; max-width:1280px; margin:0 auto; position:relative; }}
+    .hero-inner{{ display:grid; grid-template-columns: minmax(0,1.05fr) minmax(0,1fr); gap:52px; align-items:center; }}
+    @media (max-width: 1100px){{ .hero-inner{{ grid-template-columns: 1fr; }} }}
 
-    .hero-title{{{{ font-size:2.8rem; font-weight:800; color:var(--text-strong); margin:0 0 14px 0; }}}}
-    .hero-title span{{{{ color:var(--pink); }}}}
-    .hero-sub{{{{ color:var(--text-muted); line-height:1.65; font-size:1.08rem; margin:0 0 22px 0; }}}}
-    .cta-row{{{{ display:flex; gap:12px; flex-wrap:wrap; }}}}
-    .btn{{{{ display:inline-flex; align-items:center; justify-content:center; gap:8px; height:48px; padding:0 22px; border-radius:12px; border:1px solid transparent;
-           font-weight:800; cursor:pointer; transition:transform .06s ease; user-select:none; min-width:220px; }}}}
-    .btn:active{{{{ transform:translateY(1px); }}}}
-    .btn-kakao{{{{ background:#FEE500; color:#000; border-color:rgba(0,0,0,.08); }}}}
-    .btn-ghost{{{{ background:#fff; color:var(--pink); border-color:var(--pink); }}}}
+    .hero-title{{ font-size:2.8rem; font-weight:800; color:var(--text-strong); margin:0 0 14px 0; }}
+    .hero-title span{{ color:var(--pink); }}
+    .hero-sub{{ color:var(--text-muted); line-height:1.65; font-size:1.08rem; margin:0 0 22px 0; }}
+    .cta-row{{ display:flex; gap:12px; flex-wrap:wrap; }}
+    .btn{{ display:inline-flex; align-items:center; justify-content:center; gap:8px; height:48px; padding:0 22px; border-radius:12px; border:1px solid transparent;
+           font-weight:800; cursor:pointer; transition:transform .06s ease; user-select:none; min-width:220px; }}
+    .btn:active{{ transform:translateY(1px); }}
+    .btn-kakao{{ background:#FEE500; color:#000; border-color:rgba(0,0,0,.08); }}
+    .btn-ghost{{ background:#fff; color:var(--pink); border-color:var(--pink); }}
 
-    .compare-wrap{{{{ position:relative; width:100%; max-width:720px; margin:0 auto;
+    .compare-wrap{{ position:relative; width:100%; max-width:720px; margin:0 auto;
                     background: linear-gradient(145deg, rgba(255, 228, 240, 0.50), rgba(255,255,255,0.92) 70%);
                     border-radius:18px; border:1px solid rgba(255,255,255,0.85);
-                    box-shadow:0 16px 40px -24px rgba(15,23,42,0.4); padding:18px; touch-action:none; }}}}
-    .canvas{{{{ position:relative; width:100%; padding-top:56.25%; overflow:hidden; border-radius:12px; background:#fff; cursor:ew-resize; }}}}
-    .canvas img{{{{ position:absolute; top:0; left:0; width:100%; height:100%; object-fit:cover; pointer-events:none; image-rendering:auto; }}}}
-    .img-overlay{{{{ clip-path: inset(0 50% 0 0); will-change: clip-path; }}}}
-    .divider{{{{ position:absolute; top:0; bottom:0; left:0; width:3px; background:#fff; pointer-events:none; transform: translateX(50%); will-change: transform; }}}}
-    .badge{{{{ position:absolute; top:8px; padding:6px 10px; border-radius:999px; font-weight:800; font-size:.85rem; color:#111827;
-             background:rgba(255,255,255,.9); border:1px solid rgba(0,0,0,.06); pointer-events:none; user-select:none; }}}}
-    .badge-left{{{{ left:8px; }}}} .badge-right{{{{ right:8px; }}}}
+                    box-shadow:0 16px 40px -24px rgba(15,23,42,0.4); padding:18px; touch-action:none; }}
+    .canvas{{ position:relative; width:100%; padding-top:56.25%; overflow:hidden; border-radius:12px; background:#fff; cursor:ew-resize; }}
+    .canvas img{{ position:absolute; top:0; left:0; width:100%; height:100%; object-fit:cover; pointer-events:none; image-rendering:auto; }}
+    .img-overlay{{ clip-path: inset(0 50% 0 0); will-change: clip-path; }}
+    .divider{{ position:absolute; top:0; bottom:0; left:0; width:3px; background:#fff; pointer-events:none; transform: translateX(50%); will-change: transform; }}
+    .badge{{ position:absolute; top:8px; padding:6px 10px; border-radius:999px; font-weight:800; font-size:.85rem; color:#111827;
+             background:rgba(255,255,255,.9); border:1px solid rgba(0,0,0,.06); pointer-events:none; user-select:none; }}
+    .badge-left{{ left:8px; }} .badge-right{{ right:8px; }}
 
-    .section{{{{ max-width:1100px; margin:36px auto; padding:0; }}}}
-    .muted{{{{ color:#475569; }}}}
-    .panel{{{{ background:var(--card); border-radius:16px; border:1px solid rgba(0,0,0,0.06); box-shadow:0 10px 24px -16px rgba(15,23,42,0.25); padding:18px; margin-top:18px; }}}}
-    .row{{{{ display:flex; gap:14px; flex-wrap:wrap; align-items:center; }}}} .row label{{{{ font-weight:700; }}}} .sep{{{{ height:1px; background:rgba(0,0,0,0.06); margin:14px 0; }}}}
+    .section{{ max-width:1100px; margin:36px auto; padding:0; }}
+    .muted{{ color:#475569; }}
+    .panel{{ background:var(--card); border-radius:16px; border:1px solid rgba(0,0,0,0.06); box-shadow:0 10px 24px -16px rgba(15,23,42,0.25); padding:18px; margin-top:18px; }}
+    .row{{ display:flex; gap:14px; flex-wrap:wrap; align-items:center; }} .row label{{ font-weight:700; }} .sep{{ height:1px; background:rgba(0,0,0,0.06); margin:14px 0; }}
 
-    .btn-op{{{{ background:#111827; color:#fff; border:1px solid #111827; padding:10px 16px; border-radius:10px; font-weight:700; cursor:pointer; }}}}
-    .btn-op[disabled]{{{{ opacity:0.4; cursor:not-allowed; }}}}
+    .btn-op{{ background:#111827; color:#fff; border:1px solid #111827; padding:10px 16px; border-radius:10px; font-weight:700; cursor:pointer; }}
+    .btn-op[disabled]{{ opacity:0.4; cursor:not-allowed; }}
 
-    .drawer-toggle{{{{ position:fixed; top:96px; left:12px; display:none; padding:10px 12px; background:#fff; border:1px solid rgba(0,0,0,0.08);
-                     border-radius:999px; box-shadow:0 8px 20px -12px rgba(15,23,42,0.4); z-index:1201; cursor:pointer; font-weight:800; }}}}
-    .drawer{{{{ position:fixed; top:0; left:0; bottom:0; width:320px; background:#ffffff; box-shadow:12px 0 30px -18px rgba(15,23,42,0.35);
-              transform: translateX(-100%); transition: transform .2s ease; z-index:1202; display:flex; flex-direction:column; }}}}
-    .drawer.open{{{{ transform: translateX(0%); }}}}
-    .drawer-head{{{{ padding:18px; border-bottom:1px solid rgba(0,0,0,0.06); display:flex; align-items:center; gap:12px; }}}}
-    .avatar{{{{ width:44px; height:44px; border-radius:999px; background:#eee; overflow:hidden; }}}}
-    .avatar img{{{{ width:100%; height:100%; object-fit:cover; display:block; }}}}
-    .name{{{{ font-weight:800; }}}}
-    .logout{{{{ margin-left:auto; background:#fff; border:1px solid rgba(0,0,0,0.12); border-radius:999px; padding:8px 12px; cursor:pointer; font-weight:700; }}}}
-    .drawer-body{{{{ padding:18px; overflow:auto; }}}}
+    .drawer-toggle{{ position:fixed; top:96px; left:12px; display:none; padding:10px 12px; background:#fff; border:1px solid rgba(0,0,0,0.08);
+                     border-radius:999px; box-shadow:0 8px 20px -12px rgba(15,23,42,0.4); z-index:1201; cursor:pointer; font-weight:800; }}
+    .drawer{{ position:fixed; top:0; left:0; bottom:0; width:320px; background:#ffffff; box-shadow:12px 0 30px -18px rgba(15,23,42,0.35);
+              transform: translateX(-100%); transition: transform .2s ease; z-index:1202; display:flex; flex-direction:column; }}
+    .drawer.open{{ transform: translateX(0%); }}
+    .drawer-head{{ padding:18px; border-bottom:1px solid rgba(0,0,0,0.06); display:flex; align-items:center; gap:12px; }}
+    .avatar{{ width:44px; height:44px; border-radius:999px; background:#eee; overflow:hidden; }}
+    .avatar img{{ width:100%; height:100%; object-fit:cover; display:block; }}
+    .name{{ font-weight:800; }}
+    .logout{{ margin-left:auto; background:#fff; border:1px solid rgba(0,0,0,0.12); border-radius:999px; padding:8px 12px; cursor:pointer; font-weight:700; }}
+    .drawer-body{{ padding:18px; overflow:auto; }}
 
-    .backdrop{{{{ position:fixed; inset:0; background:rgba(0,0,0,0.28); opacity:0; pointer-events:none; transition:opacity .15s ease; z-index:1200;
-                backdrop-filter:saturate(120%) blur(1.5px); }}}}
-    .backdrop.show{{{{ opacity:1; pointer-events:auto; }}}}
+    .backdrop{{ position:fixed; inset:0; background:rgba(0,0,0,0.28); opacity:0; pointer-events:none; transition:opacity .15s ease; z-index:1200;
+                backdrop-filter:saturate(120%) blur(1.5px); }}
+    .backdrop.show{{ opacity:1; pointer-events:auto; }}
 
-    .toast{{{{ position:fixed; left:50%; bottom:24px; transform:translateX(-50%); background:#111827; color:#fff; padding:10px 14px; border-radius:10px;
-             opacity:0; transition:opacity .2s ease; pointer-events:none; z-index:1300; }}}}
-    .toast.show{{{{ opacity:0.95; }}}}
+    .toast{{ position:fixed; left:50%; bottom:24px; transform:translateX(-50%); background:#111827; color:#fff; padding:10px 14px; border-radius:10px;
+             opacity:0; transition:opacity .2s ease; pointer-events:none; z-index:1300; }}
+    .toast.show{{ opacity:0.95; }}
 
     /* 입장 애니메이션 */
-    .will-animate{{{{ opacity:0; }}}}
-    @keyframes slideL {{{{ from{{{{opacity:0; transform:translateX(-24px)}}}} to{{{{opacity:1; transform:translateX(0)}}}} }}}}
-    @keyframes slideR {{{{ from{{{{opacity:0; transform:translateX(24px)}}}} to{{{{opacity:1; transform:translateX(0)}}}} }}}}
-    @keyframes slideDown {{{{ from{{{{opacity:0; transform:translateY(-12px)}}}} to{{{{opacity:1; transform:translateY(0)}}}} }}}}
-    @keyframes fadeUp {{{{ from{{{{opacity:0; transform:translateY(12px)}}}} to{{{{opacity:1; transform:translateY(0)}}}} }}}}
-    .animate .reveal-l{{{{ animation: slideL .6s var(--ease) .05s both; }}}}
-    .animate .reveal-r{{{{ animation: slideR .6s var(--ease) .10s both; }}}}
-    .animate .reveal-down{{{{ animation: slideDown .5s var(--ease) .02s both; }}}}
-    .animate .reveal-up{{{{ animation: fadeUp .6s var(--ease) .18s both; }}}}
-    @media (prefers-reduced-motion: reduce){{{{ .will-animate{{{{ opacity:1 !important; }}}} .animate .reveal-l, .animate .reveal-r, .animate .reveal-down, .animate .reveal-up{{{{ animation:none !important; }}}} }}}}
+    .will-animate{{ opacity:0; }}
+    @keyframes slideL {{ from{{opacity:0; transform:translateX(-24px)}} to{{opacity:1; transform:translateX(0)}} }}
+    @keyframes slideR {{ from{{opacity:0; transform:translateX(24px)}} to{{opacity:1; transform:translateX(0)}} }}
+    @keyframes slideDown {{ from{{opacity:0; transform:translateY(-12px)}} to{{opacity:1; transform:translateY(0)}} }}
+    @keyframes fadeUp {{ from{{opacity:0; transform:translateY(12px)}} to{{opacity:1; transform:translateY(0)}} }}
+    .animate .reveal-l{{ animation: slideL .6s var(--ease) .05s both; }}
+    .animate .reveal-r{{ animation: slideR .6s var(--ease) .10s both; }}
+    .animate .reveal-down{{ animation: slideDown .5s var(--ease) .02s both; }}
+    .animate .reveal-up{{ animation: fadeUp .6s var(--ease) .18s both; }}
+    @media (prefers-reduced-motion: reduce){{ .will-animate{{ opacity:1 !important; }} .animate .reveal-l, .animate .reveal-r, .animate .reveal-down, .animate .reveal-up{{ animation:none !important; }} }}
   </style>
 </head>
 <body>
