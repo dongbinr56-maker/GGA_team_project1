@@ -757,7 +757,6 @@ with st.container():
             with st.sidebar:
                 profile = st.session_state["kakao_profile"]
                 nickname, img = extract_profile(profile)
-                ...
         else:
             # ===== 로그인 전: 카카오 + 게스트 두 버튼 =====
             login_url = build_auth_url()
