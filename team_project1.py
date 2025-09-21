@@ -447,7 +447,7 @@ html, body, [class*="css"] {
 .main-title span:nth-child(5){ animation-delay: 1.1s; }
 .main-title span:nth-child(6){ animation-delay: 1.3s; }
 .main-title span:nth-child(7){ animation-delay: 1.5s; }
-.main-title span:nth-child(1){ animation-delay: 0.3s; }
+.main-title span:nth-child(8){ animation-delay: 0.3s; }
 
 /* ✅ Hero 섹션 */
 .hero-wrap {
