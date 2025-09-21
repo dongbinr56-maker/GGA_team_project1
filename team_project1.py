@@ -357,6 +357,13 @@ html, body, [class*="css"]{
   height: 100%;
   object-fit: cover;
 }
+/* 앵커(#... ) 클릭 시 부드럽게 스크롤 */
+html, body, [data-testid="stAppViewContainer"] { 
+  scroll-behavior: smooth !important; 
+}
+
+/* 도착 지점 조금 띄우고 싶으면 여기 숫자 조절 */
+#restore-app { scroll-margin-top: 24px; }  /* 0~120px 등 */
 </style>
 """, unsafe_allow_html=True)
 st.markdown("""
@@ -791,8 +798,8 @@ with st.container():
                     <div class="btn-wrap">
                         <a href="{build_auth_url()}">
                           <button class="kakao-btn">카카오 계정으로 계속</button>
-                        <a href="#restore-app" class="guest-btn" role="button">게스트 모드로 먼저 체험하기</a>
-
+                        </a>
+                        <button class="guest-btn">게스트 모드로 먼저 체험하기</button>
                     </div>
                 </div>
                 """,
