@@ -727,42 +727,43 @@ with st.container():
             with st.sidebar:
                 # ===== 사이드바 보이게 CSS 수정 =====
                 st.markdown("""
-                            <style>
-                            /* 사이드바 폭 넓히기 */
-                            section[data-testid="stSidebar"] {
-                                width: 320px !important;
-                                background-color: #f9f9f9;  /* 옅은 배경 */
-                                padding-top: 20px;
-                            }
-
-                            /* 프로필 영역 중앙 정렬 */
-                            .sidebar-profile {
-                                text-align: center;
-                                margin-top: 10px;
-                                margin-bottom: 20px;
-                            }
-                            .sidebar-profile img {
-                                border-radius: 50%;
-                                margin-bottom: 12px;
-                                box-shadow: 0 2px 6px rgba(0,0,0,0.2);
-                            }
-                            .sidebar-profile h3 {
-                                font-size: 1.2rem;
-                                font-weight: 700;
-                                margin-bottom: 16px;
-                            }
-                            .sidebar-profile button {
-                                display: block;
-                                margin: 0 auto;
-                            }
-                            </style>
+                            
                             """, unsafe_allow_html=True)
                 profile = st.session_state["kakao_profile"]
                 nickname, img = extract_profile(profile)
                 if img:
                     st.image(img, width=80)
                 if nickname:
-                    st.markdown(f"### {nickname}님 환영합니다 👋")
+                    st.markdown(f"""
+                    <style>
+                            /* 사이드바 폭 넓히기 */
+                            section[data-testid="stSidebar"] {{
+                                width: 320px !important;
+                                background-color: #f9f9f9;  /* 옅은 배경 */
+                                padding-top: 20px;
+                            }}
+
+                            /* 프로필 영역 중앙 정렬 */
+                            .sidebar-profile {{
+                                text-align: center;
+                                margin-top: 10px;
+                                margin-bottom: 20px;
+                            }}
+                            .sidebar-profile img {{
+                                border-radius: 50%;
+                                margin-bottom: 12px;
+                                box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+                            }}
+                            .sidebar-profile h3 {{
+                                font-size: 1.2rem;
+                                font-weight: 700;
+                                margin-bottom: 16px;
+                            }}
+                            .sidebar-profile button {{
+                                display: block;
+                                margin: 0 auto;
+                            }}
+                            </style>### {nickname}님 환영합니다 👋""")
 
                 if st.button("로그아웃"):
                     st.session_state.pop("kakao_token", None)
