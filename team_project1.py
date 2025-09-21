@@ -807,20 +807,19 @@ with st.container():
 
 
         else:
-            # ===== 로그인 전: 버튼 보이기 =====
+            # (로그인 성공 분기 inside: with left_col:)
             st.markdown(
-                f"""
+                '''
                 <div class="left-stack">
                     <div class="hero-title">오래된 사진 복원 :<br> <span class="em">AI로 온라인 사진 복원</span></div>
                     <div class="hero-sub">바랜 사진 속 미소가 다시 빛나고, 잊힌 장면들이 생생하게 살아납니다.</div>
+
+                    <!-- ✅ 로그인 후에도 하단으로 이동하는 CTA 노출 -->
                     <div class="btn-wrap">
-                        <a href="{build_auth_url()}">
-                          <button class="kakao-btn">카카오 계정으로 계속</button>
-                        </a>
-                        <a href="#page-bottom" class="guest-btn" role="button">게스트 모드로 먼저 체험하기</a>
+                        <a href="#page-bottom" class="guest-btn cta-btn" role="button">이미지 복원하러 가기!</a>
                     </div>
                 </div>
-                """,
+                ''',
                 unsafe_allow_html=True
             )
 
@@ -1014,8 +1013,13 @@ def run_story_generation() -> None:
     r = ensure_restoration_state()
     text = build_story(r["description"], r["counts"], r["photo_type"])
     r["counts"]["story"] += 1
-    r["story"] = {"text": text, "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"), "status": dict(r["counts"])}
-
+    r["story"] = {
+        "text": text,
+        "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+        "status": dict(r["counts"]),
+    }
+    # ✅ 생성 직후 페이지 하단(스토리 섹션)으로 스크롤 플래그
+    st.session_state["scroll_to_story"] = True
 # ---------- 섹션 CSS ----------
 st.markdown(
     """
@@ -1123,12 +1127,67 @@ else:
                 st.markdown(row_html, unsafe_allow_html=True)
 
     # ---------- 스토리 ----------
+    # ---------- 스토리 ----------
     if rstate.get("story"):
         st.subheader("스토리")
         info = rstate["story"]
         st.markdown(info["text"])
         st.caption(f"생성 시각: {info['timestamp']} / {format_status(info['status'])}")
 
+        # ✅ 가로 정렬 섹션(스토리/원본/복원) - 맨 아래 앵커
+        st.markdown('<div id="story-bottom"></div>', unsafe_allow_html=True)
+
+        import base64, html
+
+        # 원본/복원 이미지 준비 (복원 없으면 current/원본으로 fallback)
+        orig_bytes = rstate["original_bytes"]
+        last_bytes = (rstate["history"][-1]["bytes"] if rstate["history"] else rstate["current_bytes"] or orig_bytes)
+
+        b64_orig = base64.b64encode(orig_bytes).decode("ascii")
+        b64_last = base64.b64encode(last_bytes).decode("ascii")
+        fname = (rstate.get("file_name") or "image").rsplit("/", 1)[-1]
+        dn_orig = f"original_{fname}".replace(" ", "_")
+        dn_last = f"restored_{fname}".replace(" ", "_")
+
+        lane_html = f"""
+        <style>
+          .story-lane {{
+            display:flex; gap:16px; align-items:flex-start; margin-top:8px;
+            overflow-x:auto; padding:8px 2px;
+          }}
+          .story-card, .story-img {{
+            border:1px solid #e5e7eb; border-radius:12px; background:#fff;
+          }}
+          .story-card {{
+            flex: 1 1 50%; padding:14px; min-width: 320px; white-space:pre-wrap; line-height:1.6;
+          }}
+          .story-img {{
+            flex: 0 0 340px; text-decoration:none; color:inherit; padding:10px; text-align:center;
+          }}
+          .story-img img {{ width:100%; border-radius:8px; display:block; }}
+          .story-img .dl {{ margin-top:6px; font-size:.9rem; color:#6b7280; }}
+        </style>
+        <div class="story-lane">
+          <div class="story-card">{{html.escape(info["text"]).replace("\\n", "<br>")}}</div>
+          <a class="story-img" href="data:image/png;base64,{b64_orig}" download="{dn_orig}">
+            <img src="data:image/png;base64,{b64_orig}" alt="원본 이미지"/>
+            <div class="dl">원본 다운로드</div>
+          </a>
+          <a class="story-img" href="data:image/png;base64,{b64_last}" download="{dn_last}">
+            <img src="data:image/png;base64,{b64_last}" alt="복원 이미지"/>
+            <div class="dl">복원본 다운로드</div>
+          </a>
+        </div>
+        """
+        st.markdown(lane_html, unsafe_allow_html=True)
+if st.session_state.get("scroll_to_story"):
+    st.markdown("""
+    <script>
+      const t = document.getElementById('story-bottom');
+      if (t) t.scrollIntoView({behavior:'smooth', block:'start'});
+    </script>
+    """, unsafe_allow_html=True)
+    st.session_state["scroll_to_story"] = False
 st.markdown("---")
 st.caption("*DeOldify, ESRGAN, NAFNet 등의 실제 모델 연동을 위한 자리 표시자입니다(현재는 샘플 필터).*")
 st.markdown("<div style='height: 15rem'></div>", unsafe_allow_html=True)
