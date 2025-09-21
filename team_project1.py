@@ -361,6 +361,19 @@ html, body, [class*="css"]{
 }
 </style>
 """, unsafe_allow_html=True)
+
+# --- Smooth scroll (global) ---
+st.markdown("""
+<style>
+/* Global smooth scrolling for anchor jumps */
+html, body, [data-testid="stAppViewContainer"], .main, .block-container { 
+  scroll-behavior: smooth !important; 
+}
+#page-bottom { scroll-margin-top: 0; }
+#restore-app { scroll-margin-top: 24px; }  /* If you ever scroll to restore section */
+</style>
+""", unsafe_allow_html=True)
+
 st.markdown("""
 <style>
 /* 1) Streamlit 슬라이더/범용 range 입력, 전역에서 감추기 */
@@ -811,39 +824,40 @@ with st.container():
 
     with right_col:
         render_compare(before_b64, after_b64, start=50, height_px=hero_h)
+# --- 게스트 모드 버튼 클릭 시 복원 섹션으로 스무스 스크롤 ---
+st.markdown("""
+<script>
+(function () {
+  function scrollToRestore() {
+    var t = document.getElementById('restore-app')
+         || document.getElementById('restore-title');
+    if (!t) { window.location.hash = '#restore-app'; return; }
+    try { t.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
+    catch (e) { window.location.hash = '#restore-app'; }
+  }
 
-        # ⬇︎ 같은 들여쓰기(오른쪽 컬럼 안)
-        st.markdown("""
-        <script>
-        (function () {
-          function scrollToRestore() {
-            var t = document.getElementById('restore-app') || document.getElementById('restore-title');
-            if (!t) { window.location.hash = '#restore-app'; return; }
-            try { t.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
-            catch (e) { window.location.hash = '#restore-app'; }
-          }
-          function bindGuestBtn() {
-            var btns = document.querySelectorAll('button.guest-btn');
-            btns.forEach(function (b) {
-              if (b.dataset.bound === '1') return;
-              b.dataset.bound = '1';
-              b.addEventListener('click', function (e) {
-                e.preventDefault();
-                scrollToRestore();
-              });
-            });
-          }
-          if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', bindGuestBtn);
-          } else {
-            bindGuestBtn();
-          }
-          new MutationObserver(bindGuestBtn).observe(document.body, { childList: true, subtree: true });
-        })();
-        </script>
-        """, unsafe_allow_html=True)
+  function bindGuestBtn() {
+    var btns = document.querySelectorAll('button.guest-btn');
+    btns.forEach(function (b) {
+      if (b.dataset.bound === '1') return;
+      b.dataset.bound = '1';
+      b.addEventListener('click', function (e) {
+        e.preventDefault();
+        scrollToRestore();
+      });
+    });
+  }
 
-    # 여기서부터는 들여쓰기 빼고(블록 밖) 이어서 다른 코드...
+  // 초기 + 재렌더 대비
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', bindGuestBtn);
+  } else {
+    bindGuestBtn();
+  }
+  new MutationObserver(bindGuestBtn).observe(document.body, { childList: true, subtree: true });
+})();
+</script>
+""", unsafe_allow_html=True)
 
 # =====================[ 사진 복원 기능 + 워크플로우 (추가 블록) ]=====================
 # ⚠️ 기존 team_project1.py 내용은 절대 수정하지 않고, 이 블록만 파일 맨 하단에 추가하세요.
@@ -1149,14 +1163,6 @@ st.markdown("---")
 st.caption("*DeOldify, ESRGAN, NAFNet 등의 실제 모델 연동을 위한 자리 표시자입니다(현재는 샘플 필터).*")
 st.markdown("<div style='height: 8rem'></div>", unsafe_allow_html=True)
 # ====================[ 추가 블록 끝 ]====================
-
-
-# --- Smooth scrolling for anchor jumps ---
-st.markdown("""
-<style>
-html, body, [data-testid="stAppViewContainer"] { scroll-behavior: smooth !important; }
-</style>
-""", unsafe_allow_html=True)
 
 # --- Anchor at the very bottom ---
 st.markdown("<div id='page-bottom'></div>", unsafe_allow_html=True)
