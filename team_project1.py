@@ -719,8 +719,6 @@ with st.container():
                 unsafe_allow_html=True
             )
 
-
-            # ===== 사이드바 내용 =====
             with st.sidebar:
                 profile = st.session_state["kakao_profile"]
                 nickname, img = extract_profile(profile)
@@ -731,11 +729,13 @@ with st.container():
                     width: 320px !important;
                     background-color: #f9f9f9;
                     padding-top: 20px;
+                    display: flex;
+                    flex-direction: column;
+                    justify-content: space-between; /* 위(프로필) / 아래(로그아웃) 자동 분리 */
+                    height: 100vh; /* 전체 높이 채우기 */
                 }
                 .sidebar-profile {
                     text-align: center;
-                    margin-top: 10px;
-                    margin-bottom: 20px;
                 }
                 .sidebar-profile img {
                     border-radius: 50%;
@@ -747,9 +747,14 @@ with st.container():
                     font-weight: 700;
                     margin-bottom: 16px;
                 }
+                .logout-wrap {
+                    text-align: center;
+                    padding-bottom: 20px;
+                }
                 </style>
                 """, unsafe_allow_html=True)
 
+                # ===== 프로필 영역 =====
                 st.markdown(
                     f"""
                     <div class="sidebar-profile">
@@ -760,13 +765,14 @@ with st.container():
                     unsafe_allow_html=True
                 )
 
-                # 로그아웃 버튼을 아래 고정 영역에 렌더링
+                # ===== 로그아웃 버튼 영역 (하단 고정) =====
                 st.markdown('<div class="logout-wrap">', unsafe_allow_html=True)
                 if st.button("로그아웃"):
                     st.session_state.pop("kakao_token", None)
                     st.session_state.pop("kakao_profile", None)
                     st.rerun()
                 st.markdown('</div>', unsafe_allow_html=True)
+
         else:
             # ===== 로그인 전: 버튼 보이기 =====
             st.markdown(
