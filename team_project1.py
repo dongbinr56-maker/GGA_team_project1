@@ -813,8 +813,6 @@ with st.container():
                 <div class="left-stack">
                     <div class="hero-title">오래된 사진 복원 :<br> <span class="em">AI로 온라인 사진 복원</span></div>
                     <div class="hero-sub">바랜 사진 속 미소가 다시 빛나고, 잊힌 장면들이 생생하게 살아납니다.</div>
-
-                    <!-- ✅ 로그인 후에도 하단으로 이동하는 CTA 노출 -->
                     <div class="btn-wrap">
                         <a href="#page-bottom" class="guest-btn cta-btn" role="button">이미지 복원하러 가기!</a>
                     </div>
@@ -1168,7 +1166,7 @@ else:
           .story-img .dl {{ margin-top:6px; font-size:.9rem; color:#6b7280; }}
         </style>
         <div class="story-lane">
-          <div class="story-card">{{html.escape(info["text"]).replace("\\n", "<br>")}}</div>
+          <div class="story-card">{html.escape(info["text"]).replace("\n", "<br>")}</div>
           <a class="story-img" href="data:image/png;base64,{b64_orig}" download="{dn_orig}">
             <img src="data:image/png;base64,{b64_orig}" alt="원본 이미지"/>
             <div class="dl">원본 다운로드</div>
