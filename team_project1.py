@@ -715,7 +715,16 @@ with st.container():
         # 로그인 성공 여부 확인
         if "kakao_profile" in st.session_state:
             # ===== Hero 영역 (로그인 시 버튼 감춤) =====
-            st.markdown("<div style='height:80px'></div>", unsafe_allow_html=True)
+            # 🔧 복원 섹션 CSS 넣는 곳 근처에 추가
+            st.markdown("""
+            <style>
+            /* 'restore-app' 앵커 다음에 렌더되는 첫 h1(= 섹션 제목)에 상단 여백 추가 */
+            #restore-app + div h1 { margin-top: 96px !important; }  /* 숫자만 조절 */
+            @media (min-width: 1200px){
+              #restore-app + div h1 { margin-top: 120px !important; }
+            }
+            </style>
+            """, unsafe_allow_html=True)
             st.markdown(
                 '<div class="left-stack">'
                 '<div class="hero-title">오래된 사진 복원 :<br> <span class="em">AI로 온라인 사진 복원</span></div>'
