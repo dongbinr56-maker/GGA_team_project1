@@ -715,6 +715,7 @@ with st.container():
         # 로그인 성공 여부 확인
         if "kakao_profile" in st.session_state:
             # ===== Hero 영역 (로그인 시 버튼 감춤) =====
+            st.markdown("<div style='height:80px'></div>", unsafe_allow_html=True)
             st.markdown(
                 '<div class="left-stack">'
                 '<div class="hero-title">오래된 사진 복원 :<br> <span class="em">AI로 온라인 사진 복원</span></div>'
