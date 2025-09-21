@@ -707,29 +707,52 @@ after_b64  = pil_to_data_uri(after_img,  fmt="JPEG", quality=90)
 # [레이아웃] 좌(텍스트) / 우(미리보기)
 # ------------------------------
 with st.container():
-    # hero-wrap 시작
     left_col, right_col = st.columns([0.9, 0.8])
 
     with left_col:
-        # 세로 가운데 + 좌측 정렬 유지
-        st.markdown(
-            '<div class="left-stack">'
-            # 1) 타이틀: 왼쪽 영역에서 가운데 위치(세로), 텍스트는 좌측 정렬
-            '<div class="hero-title">오래된 사진 복원 :<br> <span class="em">AI로 온라인 사진 복원</span></div>'
-            # 2) 설명문: 요구 문구로 교체 + 좌측 정렬 유지
-            '<div class="hero-sub">바랜 사진 속 미소가 다시 빛나고, 잊힌 장면들이 생생하게 살아납니다.</div>'
-            # 3) 버튼: 한 벌만, 동일 크기
-            '<div class="btn-wrap">'
-            f'<a href="https://kauth.kakao.com/oauth/authorize?client_id={REST_API_KEY}&redirect_uri={REDIRECT_URI}&response_type=code&state={STATE_SECRET}">'
-              '<button class="kakao-btn">카카오 계정으로 계속</button>'
-            '</a>'
-            '  <button class="guest-btn">게스트 모드로 먼저 체험하기</button>'
-            '</div>'
-            '</div>',
-            unsafe_allow_html=True
-        )
+        # 로그인 성공 여부 확인
+        if "kakao_profile" in st.session_state:
+            # ===== 로그인 상태일 때: 버튼 감춤 =====
+            st.markdown(
+                '<div class="left-stack">'
+                '<div class="hero-title">오래된 사진 복원 :<br> <span class="em">AI로 온라인 사진 복원</span></div>'
+                '<div class="hero-sub">바랜 사진 속 미소가 다시 빛나고, 잊힌 장면들이 생생하게 살아납니다.</div>'
+                '</div>',
+                unsafe_allow_html=True
+            )
 
-    # 우측: 고정 예시 이미지 비교
+            # ===== 사이드바 열기 =====
+            with st.sidebar:
+                profile = st.session_state["kakao_profile"]
+                nickname, img = extract_profile(profile)
+                if img:
+                    st.image(img, width=80)
+                if nickname:
+                    st.markdown(f"### {nickname}님 환영합니다 👋")
+
+                if st.button("로그아웃"):
+                    st.session_state.pop("kakao_token", None)
+                    st.session_state.pop("kakao_profile", None)
+                    st.rerun()
+
+        else:
+            # ===== 로그인 전: 버튼 보이기 =====
+            st.markdown(
+                f"""
+                <div class="left-stack">
+                    <div class="hero-title">오래된 사진 복원 :<br> <span class="em">AI로 온라인 사진 복원</span></div>
+                    <div class="hero-sub">바랜 사진 속 미소가 다시 빛나고, 잊힌 장면들이 생생하게 살아납니다.</div>
+                    <div class="btn-wrap">
+                        <a href="{build_auth_url()}">
+                          <button class="kakao-btn">카카오 계정으로 계속</button>
+                        </a>
+                        <button class="guest-btn">게스트 모드로 먼저 체험하기</button>
+                    </div>
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
+
     with right_col:
         render_compare(before_b64, after_b64, start=50, height_px=hero_h)
 
