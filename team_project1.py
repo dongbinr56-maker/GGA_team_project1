@@ -247,9 +247,7 @@ st.markdown("""
   padding-top: 0rem !important;
   padding-bottom: 0rem !important;
 }
-/* 사이드바 및 토글 숨김 */
-[data-testid="stSidebar"]{ display:none !important; }
-[data-testid="collapsedControl"]{ display:none !important; }
+
 
 /* 전체 폰트 */
 html, body, [class*="css"]{
