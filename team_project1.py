@@ -992,17 +992,21 @@ st.markdown("""
 # (그대로 유지) 앵커
 st.markdown("<div id='restore-app'></div>", unsafe_allow_html=True)
 
-# ⬇️ CSS: 제목 위 간격을 '진짜'로 벌림
+# 1) CSS: 이 블록을 앵커 다음에 넣기
 st.markdown("""
 <style>
-#restore-title {
-  margin-top: 10rem !important;  /* 🔥 위쪽 간격 늘리기 (원하는 만큼 조절) */
-  padding: 10px 0 !important;    /* 제목 자체 내부 여백(선택) */
-}
+/* 이 제목만 확실히 잡아 패딩 크게 */
+#restore-title { padding: 10rem 0 10px !important; margin-top: 0 !important; }
 </style>
 """, unsafe_allow_html=True)
+_nick = None
+if "kakao_profile" in st.session_state:
+    try:
+        _nick, _ = extract_profile(st.session_state["kakao_profile"])
+    except Exception:
+        _nick = None
 st.markdown("<div style='height: 10rem'></div>", unsafe_allow_html=True)
-# ⬇️ st.title 말고 h1로 렌더(이 id를 잡아서 위 CSS가 100% 먹힘)
+# 2) 제목 렌더링: st.title 대신 아래 한 줄로 교체
 st.markdown("<h1 id='restore-title'>📌 사진 복원 + 스토리 생성</h1>", unsafe_allow_html=True)
 
 st.markdown("<h2 class='section-title'>AI 복원 워크플로우</h2>", unsafe_allow_html=True)
