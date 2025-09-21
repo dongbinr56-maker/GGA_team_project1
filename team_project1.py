@@ -728,12 +728,13 @@ with st.container():
                 section[data-testid="stSidebar"] {{
                     width: 320px !important;
                     background-color: #f9f9f9;
-                    padding: 15px;
+                    padding: 5px 15px 15px 15px; /* 위쪽 패딩 줄임 */
                 }}
                 .sidebar-row {{
                     display: flex;
                     align-items: center;
                     gap: 12px;
+                    margin-top: 0;   /* 위쪽 여백 제거 */
                 }}
                 .sidebar-row img {{
                     border-radius: 50%;
