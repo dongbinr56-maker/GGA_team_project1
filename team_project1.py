@@ -760,10 +760,13 @@ with st.container():
                     unsafe_allow_html=True
                 )
 
+                # 로그아웃 버튼을 아래 고정 영역에 렌더링
+                st.markdown('<div class="logout-wrap">', unsafe_allow_html=True)
                 if st.button("로그아웃"):
                     st.session_state.pop("kakao_token", None)
                     st.session_state.pop("kakao_profile", None)
                     st.rerun()
+                st.markdown('</div>', unsafe_allow_html=True)
         else:
             # ===== 로그인 전: 버튼 보이기 =====
             st.markdown(
