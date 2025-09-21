@@ -1186,4 +1186,4 @@ st.caption("*DeOldify, ESRGAN, NAFNet 등의 실제 모델 연동을 위한 자�
 st.markdown("<div style='height: 15rem'></div>", unsafe_allow_html=True)
 
 # =====================[ 추가 블록 끝 ]====================
-st.markdown("<div id='page-bottom'></div>", unsafe_allow_html=True)
+st.markdown("<div id='#c33b860f'></div>", unsafe_allow_html=True)
