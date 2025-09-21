@@ -1024,6 +1024,7 @@ st.markdown(
 
 # ---------- 앵커 & 제목 ----------
 st.markdown("<div id='restore-app'></div>", unsafe_allow_html=True)
+st.markdown("<div style='height: 10rem'></div>", unsafe_allow_html=True)
 st.markdown("<h1 id='restore-title'>📌 사진 복원 + 스토리 생성</h1>", unsafe_allow_html=True)
 
 # ---------- 업로드 ----------
