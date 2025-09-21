@@ -757,7 +757,7 @@ with st.container():
 
                 <div class="sidebar-row">
                     <img src="{img}" alt="profile"/>
-                    <span>{nickname}</span>
+                    <span>{nickname} 안녕하세요!</span>
                     <form action="?logout=1" method="get">
                         <button type="submit">로그아웃</button>
                     </form>
