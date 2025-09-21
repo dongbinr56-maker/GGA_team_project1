@@ -721,36 +721,36 @@ with st.container():
                 unsafe_allow_html=True
             )
 
-            # ===== 사이드바 CSS =====
-            st.markdown("""
-            <style>
-            section[data-testid="stSidebar"] {
-                width: 320px !important;
-                background-color: #f9f9f9;
-                padding-top: 20px;
-            }
-            .sidebar-profile {
-                text-align: center;
-                margin-top: 10px;
-                margin-bottom: 20px;
-            }
-            .sidebar-profile img {
-                border-radius: 50%;
-                margin-bottom: 12px;
-                box-shadow: 0 2px 6px rgba(0,0,0,0.2);
-            }
-            .sidebar-profile h3 {
-                font-size: 1.2rem;
-                font-weight: 700;
-                margin-bottom: 16px;
-            }
-            </style>
-            """, unsafe_allow_html=True)
 
             # ===== 사이드바 내용 =====
             with st.sidebar:
                 profile = st.session_state["kakao_profile"]
                 nickname, img = extract_profile(profile)
+
+                st.markdown("""
+                <style>
+                section[data-testid="stSidebar"] {
+                    width: 320px !important;
+                    background-color: #f9f9f9;
+                    padding-top: 20px;
+                }
+                .sidebar-profile {
+                    text-align: center;
+                    margin-top: 10px;
+                    margin-bottom: 20px;
+                }
+                .sidebar-profile img {
+                    border-radius: 50%;
+                    margin-bottom: 12px;
+                    box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+                }
+                .sidebar-profile h3 {
+                    font-size: 1.2rem;
+                    font-weight: 700;
+                    margin-bottom: 16px;
+                }
+                </style>
+                """, unsafe_allow_html=True)
 
                 st.markdown(
                     f"""
@@ -766,7 +766,6 @@ with st.container():
                     st.session_state.pop("kakao_token", None)
                     st.session_state.pop("kakao_profile", None)
                     st.rerun()
-
         else:
             # ===== 로그인 전: 버튼 보이기 =====
             st.markdown(
