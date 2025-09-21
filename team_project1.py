@@ -17,7 +17,7 @@ import streamlit as st
 import streamlit.components.v1 as components
 from PIL import Image
 from urllib.parse import urlencode, parse_qs, urlparse
-from streamlit_image_comparison import image_comparison
+# from streamlit_image_comparison import image_comparison
 
 # ------------------------------
 # [설정] 페이지 레이아웃
