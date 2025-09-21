@@ -989,6 +989,49 @@ st.markdown(
 )
 
 # ---------- 앵커 & 제목 ----------
+
+# === Busy overlay & cursor (loading indicator) ===
+_busy_ph = st.empty()  # overlay placeholder
+
+st.markdown("""
+<style>
+body.busy, body.busy * { cursor: progress !important; }
+#busy-mask {
+  position: fixed; inset: 0;
+  background: rgba(255,255,255,.65);
+  backdrop-filter: saturate(1.1) blur(2px);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 9999;
+}
+#busy-mask .box { display:flex; flex-direction:column; align-items:center; }
+#busy-mask .ring {
+  width: 56px; height: 56px; border-radius: 999px;
+  border: 4px solid #f9a8d4; border-top-color:#ec4899;
+  animation: busy-rot .9s linear infinite;
+}
+#busy-mask .msg { margin-top: 10px; font-weight: 700; color:#ec4899; }
+@keyframes busy-rot { to { transform: rotate(360deg); } }
+</style>
+""", unsafe_allow_html=True)
+
+def busy_on(msg: str = "처리 중…"):
+    _busy_ph.markdown(
+        f"""
+        <div id="busy-mask">
+          <div class="box">
+            <div class="ring"></div>
+            <div class="msg">{msg}</div>
+          </div>
+        </div>
+        <script>document.body.classList.add('busy');</script>
+        """,
+        unsafe_allow_html=True,
+    )
+
+def busy_off():
+    _busy_ph.empty()
+    st.markdown("<script>document.body.classList.remove('busy');</script>", unsafe_allow_html=True)
+
 st.markdown("<div id='restore-app'></div>", unsafe_allow_html=True)
 st.markdown("<div style='height: 10rem'></div>", unsafe_allow_html=True)
 st.markdown("<h1 id='restore-title'>📌 사진 복원 + 스토리 생성</h1>", unsafe_allow_html=True)
