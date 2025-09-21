@@ -724,8 +724,33 @@ with st.container():
             # ===== 사이드바 보이게 CSS 수정 =====
             st.markdown("""
             <style>
-            [data-testid="stSidebar"]{ display:block !important; }
-            [data-testid="collapsedControl"]{ display:block !important; }
+            /* 사이드바 폭 넓히기 */
+            section[data-testid="stSidebar"] {
+                width: 320px !important;
+                background-color: #f9f9f9;  /* 옅은 배경 */
+                padding-top: 20px;
+            }
+
+            /* 프로필 영역 중앙 정렬 */
+            .sidebar-profile {
+                text-align: center;
+                margin-top: 10px;
+                margin-bottom: 20px;
+            }
+            .sidebar-profile img {
+                border-radius: 50%;
+                margin-bottom: 12px;
+                box-shadow: 0 2px 6px rgba(0,0,0,0.2);
+            }
+            .sidebar-profile h3 {
+                font-size: 1.2rem;
+                font-weight: 700;
+                margin-bottom: 16px;
+            }
+            .sidebar-profile button {
+                display: block;
+                margin: 0 auto;
+            }
             </style>
             """, unsafe_allow_html=True)
 
