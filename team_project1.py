@@ -317,6 +317,7 @@ html, body, [class*="css"]{
   font-weight: 600;
   cursor: pointer;
 }
+
 /* 우측 비교 위젯 컨테이너 */
 .compare-wrap{
   position: relative; width:100%;
@@ -799,7 +800,7 @@ with st.container():
                         <a href="{build_auth_url()}">
                           <button class="kakao-btn">카카오 계정으로 계속</button>
                         </a>
-                        <button class="guest-btn">게스트 모드로 먼저 체험하기</button>
+                        <a href="#restore-app" class="guest-btn" role="button">게스트 모드로 먼저 체험하기</a>
                     </div>
                 </div>
                 """,
@@ -817,7 +818,12 @@ with st.container():
     with right_col:
         render_compare(before_b64, after_b64, start=50, height_px=hero_h)
 
-
+    st.markdown("""
+    <style>
+    html, body, [data-testid="stAppViewContainer"] { scroll-behavior: smooth !important; }
+    #restore-app { scroll-margin-top: 24px; }  /* 도착 지점 살짝 띄우기(원하면 0~120px 조절) */
+    </style>
+    """, unsafe_allow_html=True)
     # 여기서부터는 들여쓰기 빼고(블록 밖) 이어서 다른 코드...
 
 # =====================[ 사진 복원 기능 + 워크플로우 (추가 블록) ]=====================
