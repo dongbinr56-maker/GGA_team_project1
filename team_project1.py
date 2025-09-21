@@ -729,13 +729,12 @@ with st.container():
                     width: 320px !important;
                     background-color: #f9f9f9;
                     padding-top: 20px;
-                    display: flex;
-                    flex-direction: column;
-                    justify-content: space-between; /* 위(프로필) / 아래(로그아웃) 자동 분리 */
-                    height: 100vh; /* 전체 높이 채우기 */
+                    position: relative; /* 기준 잡기 */
+                    height: 100vh;
                 }
                 .sidebar-profile {
                     text-align: center;
+                    margin-top: 20px;
                 }
                 .sidebar-profile img {
                     border-radius: 50%;
@@ -748,8 +747,10 @@ with st.container():
                     margin-bottom: 16px;
                 }
                 .logout-wrap {
+                    position: absolute;
+                    bottom: 20px;   /* 하단 고정 */
+                    width: 100%;
                     text-align: center;
-                    padding-bottom: 20px;
                 }
                 </style>
                 """, unsafe_allow_html=True)
@@ -765,13 +766,14 @@ with st.container():
                     unsafe_allow_html=True
                 )
 
-                # ===== 로그아웃 버튼 영역 (하단 고정) =====
+                # ===== 로그아웃 버튼 (하단 고정) =====
                 st.markdown('<div class="logout-wrap">', unsafe_allow_html=True)
                 if st.button("로그아웃"):
                     st.session_state.pop("kakao_token", None)
                     st.session_state.pop("kakao_profile", None)
                     st.rerun()
                 st.markdown('</div>', unsafe_allow_html=True)
+
 
         else:
             # ===== 로그인 전: 버튼 보이기 =====
