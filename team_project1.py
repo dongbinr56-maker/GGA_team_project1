@@ -1005,7 +1005,7 @@ st.title("📌 사진 복원 + 스토리 생성")
 st.markdown("""
 <style>
 /* 복원 섹션 시작(#restore-app) '이후'에 나오는 첫 h1에도 적용됨 */
-#restore-app ~ div h1 { padding: 10rem 0 10px !important; }
+#restore-app ~ div h1 { padding: 18rem 0 10px !important; }
 </style>
 """, unsafe_allow_html=True)
 
