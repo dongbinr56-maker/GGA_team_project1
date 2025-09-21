@@ -110,8 +110,8 @@ def get_user_profile(access_token: str) -> dict:
 
 def extract_profile(user_me: dict):
     """응답에서 닉네임/프로필 이미지 추출(없으면 공백)"""
-    account = (user_me or {{}}).get("kakao_account", {{}}) or {{}}
-    profile = account.get("profile", {{}}) or {{}}
+    account = (user_me or {}).get("kakao_account", {}) or {}
+    profile = account.get("profile", {}) or {}
     nickname = profile.get("nickname") or ""
     img = profile.get("profile_image_url") or profile.get("thumbnail_image_url") or ""
     return nickname, img
@@ -176,7 +176,7 @@ AFTER_URI  = data_uri("after.png")   # 오른쪽(컬러)
 def get_qp() -> dict:
     """Streamlit 새 API만 사용; 모든 값을 문자열 하나로 평탄화"""
     q = st.query_params
-    out = {{}}
+    out = {}
     for k, v in q.items():
         if isinstance(v, (list, tuple)):
             out[k] = v[0]
@@ -221,7 +221,7 @@ if code and (st.session_state.get("_kakao_code_handled") != code):
             tok = exchange_code_for_token(code)
             st.session_state["kakao_token"] = tok
             access = tok.get("access_token")
-            user_me = get_user_profile(access) if access else {{}}
+            user_me = get_user_profile(access) if access else {}
             nickname, img = extract_profile(user_me)
             st.session_state["kakao_profile"] = {{"nickname": nickname, "img": img}}
     except requests.HTTPError as e:
@@ -237,8 +237,8 @@ if code and (st.session_state.get("_kakao_code_handled") != code):
 # 6) 세션 스냅샷/상수
 # =============================
 logged_in = "kakao_token" in st.session_state
-nickname = (st.session_state.get("kakao_profile") or {{}}).get("nickname") or ""
-avatar   = (st.session_state.get("kakao_profile") or {{}}).get("img") or ""
+nickname = (st.session_state.get("kakao_profile") or {}).get("nickname") or ""
+avatar   = (st.session_state.get("kakao_profile") or {}).get("img") or ""
 
 AUTH_URL = build_auth_url()  # 로그인 URL(HTML에도 주입)
 
