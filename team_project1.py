@@ -807,21 +807,19 @@ with st.container():
             </style>
             """, unsafe_allow_html=True)
 
-
     with right_col:
         render_compare(before_b64, after_b64, start=50, height_px=hero_h)
-        # --- 게스트 모드 버튼 클릭 시 복원 섹션으로 스무스 스크롤 ---
+
+        # ⬇︎ 같은 들여쓰기(오른쪽 컬럼 안)
         st.markdown("""
         <script>
         (function () {
           function scrollToRestore() {
-            var t = document.getElementById('restore-app')
-                 || document.getElementById('restore-title');
+            var t = document.getElementById('restore-app') || document.getElementById('restore-title');
             if (!t) { window.location.hash = '#restore-app'; return; }
             try { t.scrollIntoView({ behavior: 'smooth', block: 'start' }); }
             catch (e) { window.location.hash = '#restore-app'; }
           }
-        
           function bindGuestBtn() {
             var btns = document.querySelectorAll('button.guest-btn');
             btns.forEach(function (b) {
@@ -833,8 +831,6 @@ with st.container():
               });
             });
           }
-        
-          // 초기 + 재렌더 대비
           if (document.readyState === 'loading') {
             document.addEventListener('DOMContentLoaded', bindGuestBtn);
           } else {
@@ -844,6 +840,8 @@ with st.container():
         })();
         </script>
         """, unsafe_allow_html=True)
+
+    # 여기서부터는 들여쓰기 빼고(블록 밖) 이어서 다른 코드...
 
 # =====================[ 사진 복원 기능 + 워크플로우 (추가 블록) ]=====================
 # ⚠️ 기존 team_project1.py 내용은 절대 수정하지 않고, 이 블록만 파일 맨 하단에 추가하세요.
