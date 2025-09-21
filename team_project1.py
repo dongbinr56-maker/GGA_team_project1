@@ -417,10 +417,10 @@ html, body, [class*="css"] {
 
 /* ✅ 메인 타이틀 (애니메이션) */
 .main-title {
-  font-size: 6rem;
+  font-size: 7rem;
   font-weight: 800;
   text-align: center;
-  margin: 12px 0 20px 0;   /* 👈 상단/하단 여백 최소화 */
+  margin: 10px 0 20px 0;   /* 👈 상단/하단 여백 최소화 */
   line-height: 1.1;
 }
 
