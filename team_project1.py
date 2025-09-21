@@ -723,54 +723,48 @@ with st.container():
                 profile = st.session_state["kakao_profile"]
                 nickname, img = extract_profile(profile)
 
-                # ===== CSS =====
-                st.markdown("""
+                st.markdown(f"""
                 <style>
-                section[data-testid="stSidebar"] > div:first-child {
-                    height: 100vh;                  /* 사이드바 전체 높이 */
-                    display: flex;
-                    flex-direction: column;
-                    justify-content: space-between; /* 위(프로필) / 아래(로그아웃) */
-                }
-                .sidebar-profile {
+                section[data-testid="stSidebar"] {{
+                    width: 300px !important;
+                    background-color: #f9f9f9;
+                    padding-top: 20px;
+                }}
+                .sidebar-top {{
                     text-align: center;
-                    margin-top: 20px;
-                }
-                .sidebar-profile img {
+                }}
+                .sidebar-top img {{
                     border-radius: 50%;
-                    margin-bottom: 12px;
+                    width: 80px;          /* 프로필 사이즈 줄임 */
+                    height: 80px;
+                    object-fit: cover;
+                    margin-bottom: 8px;
                     box-shadow: 0 2px 6px rgba(0,0,0,0.2);
-                }
-                .sidebar-profile h3 {
-                    font-size: 1.2rem;
-                    font-weight: 700;
-                    margin-bottom: 16px;
-                }
-                .logout-wrap {
-                    text-align: center;
-                    margin-bottom: 20px;
-                }
+                }}
+                .sidebar-top h3 {{
+                    font-size: 1rem;
+                    font-weight: 600;
+                    margin-bottom: 10px;
+                }}
+                .sidebar-top .stButton > button {{
+                    width: 100px;
+                    margin: 0 auto;
+                    display: block;
+                }}
                 </style>
+
+                <div class="sidebar-top">
+                    <img src="{img}" alt="profile"/>
+                    <h3>{nickname}님 환영합니다 👋</h3>
+                </div>
                 """, unsafe_allow_html=True)
 
-                # ===== 프로필 영역 =====
-                st.markdown(
-                    f"""
-                    <div class="sidebar-profile">
-                        <img src="{img}" width="120">
-                        <h3>{nickname}님 환영합니다 👋</h3>
-                    </div>
-                    """,
-                    unsafe_allow_html=True
-                )
-
-                # ===== 로그아웃 버튼 (Streamlit 버튼만 사용) =====
-                st.markdown('<div class="logout-wrap">', unsafe_allow_html=True)
+                # ===== 로그아웃 버튼 =====
                 if st.button("로그아웃", key="logout_btn"):
                     st.session_state.pop("kakao_token", None)
                     st.session_state.pop("kakao_profile", None)
                     st.rerun()
-                st.markdown('</div>', unsafe_allow_html=True)
+
 
 
         else:
