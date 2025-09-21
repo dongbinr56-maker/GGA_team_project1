@@ -318,7 +318,17 @@ html, body, [class*="css"]{
   border-radius: 8px;
   font-weight: 600;
   cursor: pointer;
+
+  /* ⬇️ 언더라인 제거 + 버튼처럼 중앙 정렬 */
+  text-decoration: none !important;
+  display: inline-flex; align-items:center; justify-content:center;
 }
+
+/* 앵커 상태 전부 무조건 언더라인 제거 */
+a.guest-btn:link,
+a.guest-btn:visited,
+a.guest-btn:hover,
+a.guest-btn:active { text-decoration: none !important; }
 /* 우측 비교 위젯 컨테이너 */
 .compare-wrap{
   position: relative; width:100%;
