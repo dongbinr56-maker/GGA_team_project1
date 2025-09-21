@@ -747,9 +747,10 @@ with st.container():
                 }}
                 .sidebar-row button {{
                     margin-left: auto;
-                    padding: 4px 10px;
+                    padding: 2px 8px;      /* 버튼 패딩 줄임 */
+                    font-size: 0.8rem;     /* 글자 크기 줄임 */
                     border: 1px solid #ccc;
-                    border-radius: 6px;
+                    border-radius: 4px;    /* 둥근 모서리 작게 */
                     background-color: white;
                     cursor: pointer;
                 }}
@@ -757,7 +758,7 @@ with st.container():
 
                 <div class="sidebar-row">
                     <img src="{img}" alt="profile"/>
-                    <span>{nickname} 안녕하세요!</span>
+                    <span>{nickname}</span>
                     <form action="?logout=1" method="get">
                         <button type="submit">로그아웃</button>
                     </form>
