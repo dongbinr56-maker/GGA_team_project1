@@ -7,17 +7,23 @@
 # - 이미지 경로: ./assets/before.jpg, ./assets/after.jpg  ← 직접 교체해서 사용
 # ============================================================
 
-import io, os
 import base64
-import requests
+import io
+import os
+import time
+import hmac
+import hashlib
+import secrets
+from datetime import datetime
 from pathlib import Path
-from typing import Tuple
+from typing import Dict, Optional
 
+import requests
 import streamlit as st
-import streamlit.components.v1 as components
-from PIL import Image
-from urllib.parse import urlencode, parse_qs, urlparse
-# from streamlit_image_comparison import image_comparison
+from PIL import Image, ImageFilter, ImageOps
+import textwrap
+
+import warnings
 
 # ------------------------------
 # [설정] 페이지 레이아웃
@@ -37,36 +43,146 @@ KAKAO_TOKEN_URL = "https://kauth.kakao.com/oauth/token"
 KAKAO_USER_URL = "https://kapi.kakao.com/v2/user/me"
 
 
-# ================================
-# Redirect 콜백 처리 (신규 API 반영)
-# ================================
-query_params = st.query_params  # ✅ 최신 방식
-if "code" in query_params:
-    code = query_params["code"]
+REST_API_KEY = os.getenv("KAKAO_REST_API_KEY", "caf4fd09d45864146cb6e75f70c713a1")
+REDIRECT_URI = os.getenv("KAKAO_REDIRECT_URI", "https://hackteam32.streamlit.app")
+STATE_SECRET = os.getenv("KAKAO_STATE_SECRET", "UzdfMyaTkcNsJ2eVnRoKjUIOvWbeAy5E")
+# or os.getenv("OAUTH_STATE_SECRET")
+# or (REST_API_KEY or "dev-secret")
 
-    # 액세스 토큰 요청
-    token_data = {
+AUTHORIZE_URL = "https://kauth.kakao.com/oauth/authorize"
+TOKEN_URL = "https://kauth.kakao.com/oauth/token"
+USERME_URL = "https://kapi.kakao.com/v2/user/me"
+STATE_TTL_SEC = 5 * 60
+
+
+def _hmac_sha256(key: str, msg: str) -> str:
+    return hmac.new(key.encode(), msg.encode(), hashlib.sha256).hexdigest()
+
+
+def make_state() -> str:
+    ts = str(int(time.time()))
+    nonce = secrets.token_urlsafe(8)
+    raw = f"{ts}.{nonce}"
+    sig = _hmac_sha256(STATE_SECRET, raw)
+    return f"{raw}.{sig}"
+
+
+def verify_state(state: str) -> bool:
+    if not state or state.count(".") != 2:
+        return False
+    ts, nonce, sig = state.split(".")
+    expected = _hmac_sha256(STATE_SECRET, f"{ts}.{nonce}")
+    if not hmac.compare_digest(sig, expected):
+        return False
+    try:
+        ts_i = int(ts)
+    except ValueError:
+        return False
+    if time.time() - ts_i > STATE_TTL_SEC:
+        return False
+    return True
+
+
+def build_auth_url() -> str:
+    state = make_state()
+    return (
+        f"{AUTHORIZE_URL}"
+        f"?client_id={REST_API_KEY}"
+        f"&redirect_uri={REDIRECT_URI}"
+        f"&response_type=code"
+        f"&state={state}"
+    )
+
+
+def exchange_code_for_token(code: str) -> dict:
+    data = {
         "grant_type": "authorization_code",
         "client_id": REST_API_KEY,
         "redirect_uri": REDIRECT_URI,
         "code": code,
+        "client_secret": STATE_SECRET
     }
-    token_res = requests.post(KAKAO_TOKEN_URL, data=token_data)
-    token_json = token_res.json()
+    response = requests.post(TOKEN_URL, data=data, timeout=10)
+    response.raise_for_status()
+    return response.json()
 
-    if "access_token" in token_json:
-        access_token = token_json["access_token"]
 
-        # 사용자 정보 요청
-        headers = {"Authorization": f"Bearer {access_token}"}
-        user_res = requests.get(KAKAO_USER_URL, headers=headers)
-        user_info = user_res.json()
+def get_user_profile(access_token: str) -> dict:
+    response = requests.get(
+        USERME_URL,
+        headers={"Authorization": f"Bearer {access_token}"},
+        timeout=10,
+    )
+    response.raise_for_status()
+    return response.json()
 
-        st.success("카카오 로그인 성공!")
-        st.json(user_info)
+
+def extract_profile(user_me: dict):
+    account = (user_me or {}).get("kakao_account", {}) or {}
+    profile = account.get("profile", {}) or {}
+    nickname = profile.get("nickname") or None
+    img = profile.get("profile_image_url") or profile.get("thumbnail_image_url") or None
+    if not nickname or not img:
+        props = (user_me or {}).get("properties", {}) or {}
+        nickname = nickname or props.get("nickname")
+        img = img or props.get("profile_image") or props.get("thumbnail_image")
+    return nickname, img
+
+
+# ------------------------------[ 2) 콜백/로그아웃 처리 ]------------------------
+_query_params = (
+    st.query_params if hasattr(st, "query_params") else st.experimental_get_query_params()
+)
+
+
+def _first_param(name: str):
+    value = _query_params.get(name)
+    return value[0] if isinstance(value, list) and value else value
+
+
+if _first_param("logout") == "1":
+    st.session_state.pop("kakao_token", None)
+    st.session_state.pop("kakao_profile", None)
+    if hasattr(st, "query_params"):
+        st.query_params.clear()
     else:
-        st.error("토큰 발급 실패")
-        st.json(token_json)
+        st.experimental_set_query_params()
+    st.rerun()
+error = _first_param("error")
+error_description = _first_param("error_description")
+code = _first_param("code")
+state = _first_param("state")
+if error:
+    st.error(f"카카오 인증 에러: {error}\n{error_description or ''}")
+elif code:
+    if not verify_state(state):
+        st.error("state 검증 실패(CSRF/만료). 다시 시도해주세요.")
+    else:
+        try:
+            token_json = exchange_code_for_token(code)
+            st.session_state.kakao_token = token_json
+            st.session_state.kakao_profile = get_user_profile(token_json["access_token"])
+
+            # === 팝업 창이면 토큰을 부모창으로 전달 ===
+            st.markdown(f"""
+                <script>
+                  if (window.opener) {{
+                    window.opener.postMessage({{"kakao_token": "{token_json['access_token']}" }}, "*");
+                    window.close();
+                  }} else {{
+                    // fallback: 그냥 현재창 리다이렉트
+                    window.location.href = "/";
+                  }}
+                </script>
+                """, unsafe_allow_html=True)
+
+            if hasattr(st, "query_params"):
+                st.query_params.clear()
+            else:
+                st.experimental_set_query_params()
+            st.rerun()
+        except requests.HTTPError as exc:
+            st.exception(exc)
 
 # ------------------------------
 # [경로] 예시 이미지 파일 경로 (수정 지점)
