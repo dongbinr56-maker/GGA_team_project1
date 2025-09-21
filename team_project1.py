@@ -725,6 +725,9 @@ with st.container():
 
                 st.markdown(f"""
                 <style>
+                    div[data-testid="stSidebarHeader"] {{
+                    display: none !important;
+                }}
                 section[data-testid="stSidebar"] {{
                     width: 320px !important;
                     background-color: #f9f9f9;
