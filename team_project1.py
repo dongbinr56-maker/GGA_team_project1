@@ -990,6 +990,7 @@ st.markdown("""
 
 # --- 앵커(히어로 버튼이 여기로 스크롤) ---
 # (그대로 유지) 앵커
+st# (그대로 유지) 앵커
 st.markdown("<div id='restore-app'></div>", unsafe_allow_html=True)
 
 # 1) CSS: 이 블록을 앵커 다음에 넣기
@@ -1004,7 +1005,6 @@ st.markdown("""
 
 # 2) 제목 렌더링: st.title 대신 아래 한 줄로 교체
 st.markdown("<h1 id='restore-title'>📌 사진 복원 + 스토리 생성</h1>", unsafe_allow_html=True)
-
 st.markdown("<h2 class='section-title'>AI 복원 워크플로우</h2>", unsafe_allow_html=True)
 st.markdown("<p class='section-lead'>업로드 → 복원 옵션 실행 → 스토리 생성까지 한 번에.</p>", unsafe_allow_html=True)
 
