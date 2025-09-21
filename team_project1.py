@@ -281,7 +281,7 @@ html, body, [class*="css"]{
 }
 
 /* 타이틀 */
-.hero-title{ font-size: 4.8rem; line-height: 1.15; font-weight: 800; letter-spacing: -0.02em; text-align: center;   /* 가운데 정렬 */}
+.hero-title{ font-size: 4.5rem; line-height: 1.15; font-weight: 800; letter-spacing: -0.02em; text-align: center;   /* 가운데 정렬 */}
 .hero-title .em{ color:#ec4899; }
 
 /* 설명문(요구 문구로 교체) */
