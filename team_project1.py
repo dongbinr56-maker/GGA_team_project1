@@ -746,7 +746,7 @@ with st.container():
                     <div class="hero-title">오래된 사진 복원 :<br> <span class="em">AI로 온라인 사진 복원</span></div>
                     <div class="hero-sub">바랜 사진 속 미소가 다시 빛나고, 잊힌 장면들이 생생하게 살아납니다.</div>
                     <div class="btn-wrap">
-                        <a href="#page-bottom" class="guest-btn cta-btn" role="button">이미지 복원하러 가기!</a>
+                        <a href="#c33b860f" class="guest-btn cta-btn" role="button">이미지 복원하러 가기!</a>
                     </div>
                 </div>
                 ''',
@@ -768,7 +768,7 @@ with st.container():
                     <div class="hero-sub">바랜 사진 속 미소가 다시 빛나고, 잊힌 장면들이 생생하게 살아납니다.</div>
                     <div class="btn-wrap">
                         <a href="{login_url}" class="kakao-btn cta-btn" role="button">카카오 계정으로 계속</a>
-                        <a href="#page-bottom" class="guest-btn cta-btn" role="button">게스트 모드로 먼저 체험하기</a>
+                        <a href="#c33b860f" class="guest-btn cta-btn" role="button">게스트 모드로 먼저 체험하기</a>
                     </div>
                 </div>
                 ''',
