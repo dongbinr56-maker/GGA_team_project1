@@ -358,31 +358,6 @@ a.guest-btn:active { text-decoration: none !important; }
   object-fit: cover;
 }
 </style>
-
-<style>
-/* === Sidebar behavior hardening === */
-section[data-testid="stSidebar"][aria-expanded="true"] {
-  width: 320px !important;            /* keep your custom width only when open */
-  background-color: #f9f9f9;
-  padding: 16px 14px 24px 14px;
-  border-right: 1px solid rgba(0,0,0,0.06);
-}
-section[data-testid="stSidebar"][aria-expanded="false"] {
-  width: 0 !important;                /* fully collapse width */
-  min-width: 0 !important;
-  padding-left: 0 !important;
-  padding-right: 0 !important;
-  overflow: hidden !important;
-}
-/* Make sure the toggle (chevron) is visible & clickable */
-[data-testid="collapsedControl"]{
-  display: block !important;
-  opacity: 1 !important;
-  pointer-events: auto !important;
-}
-</style>
-
-
 """, unsafe_allow_html=True)
 
 # --- Smooth scroll (global) ---
@@ -840,8 +815,15 @@ with st.container():
             )
 
             # 로그인 전엔 사이드바 숨김 (기존 유지)
-            with right_col:
-                render_compare(before_b64, after_b64, start=50, height_px=hero_h)
+            st.markdown("""
+            <style>
+            [data-testid="stSidebar"]{ display:none !important; }
+            [data-testid="collapsedControl"]{ display:none !important; }
+            </style>
+            """, unsafe_allow_html=True)
+
+    with right_col:
+        render_compare(before_b64, after_b64, start=50, height_px=hero_h)
 # --- 게스트 모드 버튼 클릭 시 복원 섹션으로 스무스 스크롤 ---
 st.markdown("""
 <script>
