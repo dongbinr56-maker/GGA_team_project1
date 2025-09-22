@@ -751,7 +751,7 @@ with st.container():
                 <style>
                   /* 기본 사이드바 헤더 영역 제거 */
                   div[data-testid="stSidebarHeader"] { display: none !important; }
-                  section[data-testid="stSidebar"] {
+                  section[data-testid="stSidebar"] [aria-expanded="true"]{
                     width: 320px !important;
                     background-color: #f9f9f9;
                     padding: 16px 14px 24px 14px;
