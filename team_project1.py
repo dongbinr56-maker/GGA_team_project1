@@ -18,7 +18,7 @@ from pathlib import Path
 import requests
 import streamlit as st
 from PIL import Image
-from transformers import pipeline
+from transformers import pipeline, Gemma3nForConditionalGeneration
 import torch
 import warnings
 
@@ -39,13 +39,12 @@ HF_TOKEN = st.secrets["HF_TOKEN"]
 
 @st.cache_resource
 def load_model():
-    return pipeline(
-        "image-text-to-text",
-        model="google/gemma-3n-e2b-it",
-        token=HF_TOKEN,   # 중요!
-        device=DEVICE,
-        torch_dtype=torch.bfloat16,
-    )
+    return Gemma3nForConditionalGeneration.from_pretrained(
+    "google/gemma-3n-E2B-it",
+    use_auth_token="YOUR_NEW_TOKEN",
+    torch_dtype=torch.bfloat16,
+    device_map="auto",
+)
 
 # ------------------------------
 # [설정] 페이지 레이아웃
