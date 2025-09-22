@@ -41,8 +41,7 @@ def load_model():
     "image-text-to-text",
     model="google/gemma-3n-e2b-it",
     device=DEVICE,
-    torch_dtype=torch.bfloat16,
-)
+    torch_dtype=torch.bfloat16,)
 
 # ------------------------------
 # [설정] 페이지 레이아웃
