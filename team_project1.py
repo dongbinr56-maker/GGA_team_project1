@@ -165,18 +165,6 @@ elif code:
             st.session_state.kakao_profile = get_user_profile(token_json["access_token"])
 
             # === 팝업 창이면 토큰을 부모창으로 전달 ===
-            st.markdown(f"""
-                <script>
-                  if (window.opener) {{
-                    window.opener.postMessage({{"kakao_token": "{token_json['access_token']}" }}, "*");
-                    window.close();
-                  }} else {{
-                    // fallback: 그냥 현재창 리다이렉트
-                    window.location.href = "/";
-                  }}
-                </script>
-                """, unsafe_allow_html=True)
-
             if hasattr(st, "query_params"):
                 st.query_params.clear()
             else:
@@ -746,7 +734,7 @@ with st.container():
                     <div class="hero-title">오래된 사진 복원 :<br> <span class="em">AI로 온라인 사진 복원</span></div>
                     <div class="hero-sub">바랜 사진 속 미소가 다시 빛나고, 잊힌 장면들이 생생하게 살아납니다.</div>
                     <div class="btn-wrap">
-                        <a href="#c33b860f" class="guest-btn cta-btn" role="button">이미지 복원하러 가기!</a>
+                        <a href="#c33b860f" class="guest-btn cta-btn" role="button" target="_self">이미지 복원하러 가기!</a>
                     </div>
                 </div>
                 ''',
@@ -802,7 +790,7 @@ with st.container():
                       <div class="sb-name">{display_name}</div>
                       <div class="sb-id">카카오 연동 완료</div>
                       <div class="sb-row">
-                        <a class="sb-btn" href="?logout=1">로그아웃</a>
+                        <a class="sb-btn" href="?logout=1" target="_self">로그아웃</a>
                       </div>
                     </div>
                     """,
@@ -818,8 +806,8 @@ with st.container():
                     <div class="hero-title">오래된 사진 복원 :<br> <span class="em">AI로 온라인 사진 복원</span></div>
                     <div class="hero-sub">바랜 사진 속 미소가 다시 빛나고, 잊힌 장면들이 생생하게 살아납니다.</div>
                     <div class="btn-wrap">
-                        <a href="{login_url}" class="kakao-btn cta-btn" role="button">카카오 계정으로 계속</a>
-                        <a href="#c33b860f" class="guest-btn cta-btn" role="button">게스트 모드로 먼저 체험하기</a>
+                        <a href="{login_url}" class="kakao-btn cta-btn" role="button" target="_self">카카오 계정으로 계속</a>
+                        <a href="#c33b860f" class="guest-btn cta-btn" role="button" target="_self">게스트 모드로 먼저 체험하기</a>
                     </div>
                 </div>
                 ''',
