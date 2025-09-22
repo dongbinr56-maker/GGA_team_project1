@@ -35,13 +35,16 @@ else:
     DEVICE = torch.device("cpu")
     TENSOR_DTYPE = torch.float32      # CPU는 fp32 안전
 
+HF_TOKEN = os.getenv("MY_HG_TOKEN")
+
 @st.cache_resource
 def load_model():
     return pipeline(
     "image-text-to-text",
     model="google/gemma-3n-e2b-it",
     device=DEVICE,
-    torch_dtype=torch.bfloat16,)
+    torch_dtype=torch.bfloat16,
+    token=HF_TOKEN)
 
 # ------------------------------
 # [설정] 페이지 레이아웃
