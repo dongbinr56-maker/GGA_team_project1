@@ -6,8 +6,11 @@
 # - 외부 의존성: streamlit, pillow(PIL)
 # - 이미지 경로: ./assets/before.jpg, ./assets/after.jpg  ← 직접 교체해서 사용
 # ============================================================
-
 from typing import Tuple
+
+# 2025/09/22 업데이트
+# 1. 카톡 로그인 새 창 실행하지 않고, 같은 세션에서 진행.
+# 2. 카톡 로그아웃 1번 내용과 동일.
 
 import streamlit.components.v1 as components
 import base64
