@@ -841,7 +841,7 @@ with st.container():
 
             # 로그인 전엔 사이드바 숨김 (기존 유지)
             with right_col:
-        render_compare(before_b64, after_b64, start=50, height_px=hero_h)
+                render_compare(before_b64, after_b64, start=50, height_px=hero_h)
 # --- 게스트 모드 버튼 클릭 시 복원 섹션으로 스무스 스크롤 ---
 st.markdown("""
 <script>
