@@ -41,7 +41,7 @@ HF_TOKEN = st.secrets["HF_TOKEN"]
 def load_model():
     return Gemma3nForConditionalGeneration.from_pretrained(
     "google/gemma-3n-E2B-it",
-    use_auth_token="YOUR_NEW_TOKEN",
+    use_auth_token=HF_TOKEN,
     torch_dtype=torch.bfloat16,
     device_map="auto",
 )
