@@ -18,13 +18,12 @@ from pathlib import Path
 import requests
 import streamlit as st
 from PIL import Image
-
+from transformers import pipeline
+import torch
 import warnings
 
 
 warnings.filterwarnings("ignore", category=DeprecationWarning)
-import torch
-from transformers import pipeline
 
 if torch.cuda.is_available():
     DEVICE = torch.device("cuda")
