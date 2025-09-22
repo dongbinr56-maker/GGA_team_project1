@@ -35,7 +35,7 @@ else:
     DEVICE = torch.device("cpu")
     TENSOR_DTYPE = torch.float32      # CPU는 fp32 안전
 
-HF_TOKEN = os.getenv("MY_HG_TOKEN")
+HF_TOKEN = os.getenv("HF_TOKEN")
 
 @st.cache_resource
 def load_model():
