@@ -757,7 +757,58 @@ with st.container():
             with st.sidebar:
                 profile = st.session_state["kakao_profile"]
                 nickname, img = extract_profile(profile)
-                ...
+
+                # 사이드바 헤더 숨김(필요 시)
+                st.markdown("""
+                <style>
+                  /* 기본 사이드바 헤더 영역 제거 */
+                  div[data-testid="stSidebarHeader"] { display: none !important; }
+                  section[data-testid="stSidebar"] {
+                    width: 320px !important;
+                    background-color: #f9f9f9;
+                    padding: 16px 14px 24px 14px;
+                    border-right: 1px solid rgba(0,0,0,0.06);
+                  }
+                  .sb-card{
+                    background:#fff; border:1px solid #e5e7eb; border-radius:16px;
+                    padding:16px; box-shadow:0 6px 18px -12px rgba(16,24,40,.2);
+                    text-align:center;
+                  }
+                  .sb-avatar{
+                    width:96px; height:96px; border-radius:999px; object-fit:cover;
+                    border:3px solid #ffe4ef; display:block; margin:0 auto 10px auto;
+                  }
+                  .sb-name{ font-weight:800; font-size:1.05rem; margin:6px 0 2px; }
+                  .sb-id{ color:#6b7280; font-size:.85rem; }
+                  .sb-row{ display:flex; gap:8px; margin-top:14px; }
+                  .sb-btn{
+                    flex:1 1 0; padding:10px 12px; border-radius:10px; font-weight:700;
+                    border:1.5px solid #f9a8d4; background:#fff; color:#ec4899; text-decoration:none !important;
+                    display:inline-flex; align-items:center; justify-content:center; cursor:pointer;
+                  }
+                  .sb-btn:hover{ background:#fff5fa; }
+                </style>
+                """, unsafe_allow_html=True)
+
+                # 안전한 기본값(닉네임/이미지 없을 때 대비)
+                display_name = nickname or "카카오 사용자"
+                avatar_url = img or "https://raw.githubusercontent.com/encharm/Font-Awesome-SVG-PNG/master/black/png/64/user.png"
+
+                # 프로필 카드
+                st.markdown(
+                    f"""
+                    <div class="sb-card">
+                      <img class="sb-avatar" src="{avatar_url}" alt="profile"/>
+                      <div class="sb-name">{display_name}</div>
+                      <div class="sb-id">카카오 연동 완료</div>
+                      <div class="sb-row">
+                        <a class="sb-btn" href="?logout=1">로그아웃</a>
+                      </div>
+                    </div>
+                    """,
+                    unsafe_allow_html=True
+                )
+
         else:
             # ===== 로그인 전: 카카오 + 게스트 두 버튼 =====
             login_url = build_auth_url()
