@@ -1035,13 +1035,13 @@ def run_story_generation():
             "role": "user",
             "content": [
                 {"type": "image", "image": tmp_file.name},   # ✅ 경로 직접 삽입
-                {"type": "text", "text": "이 이미지를 한국어로 설명하고 스토리를 만들어줘."}
+                {"type": "text", "text": "이 이미지를 보고 너는 어떤 느낌이 드는지 한국어로 설명해줘."}
             ]
         }
     ]
     # 4) 모델 호출 (images 파라미터 필요 없음!)
     pipe = load_model()
-    output = pipe(text=messages, max_new_tokens=200)
+    output = pipe(text=messages, max_new_tokens=250)
 
     return output[0]["generated_text"][-1]["content"]
 
