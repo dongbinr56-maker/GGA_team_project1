@@ -13,22 +13,37 @@ from typing import Tuple
 # 2. 카톡 로그아웃 1번 내용과 동일.
 
 import streamlit.components.v1 as components
-import base64
-import io
-import os
-import time
-import hmac
-import hashlib
-import secrets
+import base64, tempfile, io, os, time, hmac, hashlib, secrets
 from pathlib import Path
-
 import requests
 import streamlit as st
 from PIL import Image
 
 import warnings
 
+
 warnings.filterwarnings("ignore", category=DeprecationWarning)
+import torch
+from transformers import pipeline
+
+if torch.cuda.is_available():
+    DEVICE = torch.device("cuda")
+    TENSOR_DTYPE = torch.bfloat16     # 최신 GPU에서 권장
+elif torch.backends.mps.is_available():
+    DEVICE = torch.device("mps")
+    TENSOR_DTYPE = torch.float16      # 맥 MPS는 fp16 권장
+else:
+    DEVICE = torch.device("cpu")
+    TENSOR_DTYPE = torch.float32      # CPU는 fp32 안전
+
+@st.cache_resource
+def load_model():
+    return pipeline(
+    "image-text-to-text",
+    model="google/gemma-3n-e2b-it",
+    device=DEVICE,
+    torch_dtype=torch.bfloat16,
+)
 
 # ------------------------------
 # [설정] 페이지 레이아웃
@@ -489,32 +504,34 @@ st.markdown("""
   <span>"</span>
 </div>
 """, unsafe_allow_html=True)
-st.markdown("""
-<style>
-[data-baseweb="input"] {
-  display: none !important;
-  visibility: hidden !important;
-  height: 0 !important;
-  margin: 0 !important;
-  padding: 0 !important;
-  border: 0 !important;
-}
-</style>
-""", unsafe_allow_html=True)
+# 👇 team_project1.py 안에서 아래 CSS 블록 찾아서 주석 처리
+# st.markdown("""
+# <style>
+# [data-baseweb="input"],
+# [data-testid="stTextInput"] {
+#   display: none !important;
+#   visibility: hidden !important;
+#   height: 0 !important;
+#   margin: 0 !important;
+#   padding: 0 !important;
+#   border: 0 !important;
+# }
+# </style>
+# """, unsafe_allow_html=True)
 
-st.markdown("""
-<style>
-/* ✅ Streamlit 내부 검색/입력 박스 wrapper까지 싹 없애기 */
-[data-testid="stTextInput"] {
-  display: none !important;
-  visibility: hidden !important;
-  height: 0 !important;
-  margin: 0 !important;
-  padding: 0 !important;
-  border: 0 !important;
-}
-</style>
-""", unsafe_allow_html=True)
+#st.markdown("""
+#<style>
+#/* ✅ Streamlit 내부 검색/입력 박스 wrapper까지 싹 없애기 */
+#[data-testid="stTextInput"] {
+#  display: none !important;
+#  visibility: hidden !important;
+#  height: 0 !important;
+#  margin: 0 !important;
+#  padding: 0 !important;
+#  border: 0 !important;
+#}
+#</style>
+#""", unsafe_allow_html=True)
 
 st.markdown("""
 <style>
@@ -878,16 +895,34 @@ import hashlib
 import base64
 import streamlit as st
 
+def open_image(uploaded, check=False) -> Image.Image:
+    """
+    Streamlit UploadedFile → PIL.Image(RGB)
+    - EXIF 회전 보정 포함.
+    - HEIC가 필요하면 pillow-heif 설치 후 주석 해제.
+    """
+    if not check and uploaded is None :
+        raise ValueError("이미지를 업로드해주세요.")
+    print(f"{uploaded}------------->")
+    data = uploaded.getvalue()
+
+
+    # # HEIC 지원 (pillow-heif 필요)
+    # import pillow_heif
+    # pillow_heif.register_heif_opener()
+
+    img = Image.open(io.BytesIO(data))
+    img = ImageOps.exif_transpose(img).convert("RGB")
+    return img
 # ---------- 세션 상태 ----------
 def ensure_restoration_state() -> Dict:
     if "restoration" not in st.session_state:
         st.session_state.restoration = {
             "upload_digest": None,
             "original_bytes": None,
-            "photo_type": None,
             "description": "",
             "current_bytes": None,
-            "counts": {"color": 0, "upscale": 0, "denoise": 0, "story": 0},
+            "counts": {"upscale": 0, "denoise": 0, "story": 0},
             "history": [],
             "story": None,
             "file_name": None,  # 업로드 파일명
@@ -934,12 +969,11 @@ def add_history_entry(label: str, image_bytes: bytes, note: Optional[str] = None
     r["history"].append(entry)
     r["current_bytes"] = image_bytes
 
-def reset_restoration(upload_digest: str, original_bytes: bytes, photo_type: str, description: str, file_name: str) -> None:
+def reset_restoration(upload_digest: str, original_bytes: bytes, description: str, file_name: str) -> None:
     r = ensure_restoration_state()
     r.update({
         "upload_digest": upload_digest,
         "original_bytes": original_bytes,
-        "photo_type": photo_type,
         "description": description,
         "current_bytes": original_bytes,
         "counts": {"color": 0, "upscale": 0, "denoise": 0, "story": 0},
@@ -949,31 +983,6 @@ def reset_restoration(upload_digest: str, original_bytes: bytes, photo_type: str
     })
 
 # ---------- 스토리 ----------
-def build_story(description: str, counts: Dict[str, int], photo_type: str) -> str:
-    base = (description or "").strip() or "이 사진"
-    lines = [f"{base}은(는) 조심스럽게 복원 과정을 거치고 있습니다."]
-    if photo_type == "흑백":
-        if counts["color"]:
-            lines.append("흑백으로 남아 있던 순간에 색을 덧입히자 잊혔던 온기와 공기가 되살아났습니다.")
-        else:
-            lines.append("아직 색을 입히지 못한 채 시간 속에서 기다리고 있습니다.")
-    if counts["upscale"]:
-        lines.append(f"세부 묘사를 살리기 위해 해상도 보정을 {counts['upscale']}회 반복했습니다.")
-    if counts["denoise"]:
-        lines.append(f"잡음 정리 과정도 {counts['denoise']}회 진행되었습니다.")
-    lines.append("복원된 이미지를 바라보는 지금, 사진 속 이야기가 현재의 우리에게 말을 건네는 듯합니다.")
-    lines.append("이 장면이 전하고 싶은 메시지가 있다면, 그것은 기억을 계속 이어가자는 마음일지도 모릅니다.")
-    return "\n\n".join(textwrap.fill(x, width=46) for x in lines)
-
-def handle_auto_colorization(photo_type: str) -> None:
-    r = ensure_restoration_state()
-    if photo_type != "흑백" or r["counts"]["color"]:
-        return
-    img = image_from_bytes(r["current_bytes"])
-    out = colorize_image(img)
-    r["counts"]["color"] += 1
-    add_history_entry("컬러 복원 (자동)", image_to_bytes(out), note="흑백 이미지를 기본 팔레트로 색보정했습니다.")
-    r["story"] = None
 
 def can_run_operation(op: str, allow_repeat: bool) -> bool:
     r = ensure_restoration_state()
@@ -1003,17 +1012,39 @@ def run_denoise() -> None:
     r["story"] = None
     add_history_entry("노이즈 제거", image_to_bytes(out), note="NAFNet 대체 필터(샘플)로 노이즈를 완화했습니다.")
 
-def run_story_generation() -> None:
+
+def run_story_generation():
     r = ensure_restoration_state()
-    text = build_story(r["description"], r["counts"], r["photo_type"])
-    r["counts"]["story"] += 1
-    r["story"] = {
-        "text": text,
-        "timestamp": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-        "status": dict(r["counts"]),
-    }
-    # ✅ 생성 직후 페이지 하단(스토리 섹션)으로 스크롤 플래그
-    st.session_state["scroll_to_story"] = True
+    if not r.get("current_bytes"):
+        return None
+
+    # 1) 세션 상태에서 이미지 불러오기
+    pil_img = Image.open(io.BytesIO(r["current_bytes"])).convert("RGB")
+
+    # 2) 임시 파일에 저장 (경로 확보)
+    tmp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
+    pil_img.save(tmp_file.name)
+
+    # 3) 메시지 구성 (이미지 경로 직접 넣기)
+    messages = [
+        {
+            "role": "system",
+            "content": [{"type": "text", "text": "You are a helpful assistant."}]
+        },
+        {
+            "role": "user",
+            "content": [
+                {"type": "image", "image": tmp_file.name},   # ✅ 경로 직접 삽입
+                {"type": "text", "text": "이 이미지를 한국어로 설명하고 스토리를 만들어줘."}
+            ]
+        }
+    ]
+    # 4) 모델 호출 (images 파라미터 필요 없음!)
+    pipe = load_model()
+    output = pipe(text=messages, max_new_tokens=200)
+
+    return output[0]["generated_text"][-1]["content"]
+
 # ---------- 섹션 CSS ----------
 st.markdown(
     """
@@ -1079,23 +1110,30 @@ st.markdown("<div style='height: 10rem'></div>", unsafe_allow_html=True)
 st.markdown("<h1 id='restore-title'>📌 사진 복원 + 스토리 생성</h1>", unsafe_allow_html=True)
 
 # ---------- 업로드 ----------
+st.subheader("1. 사진 업로드")
 rstate = ensure_restoration_state()
-with st.container():
-    st.subheader("1. 사진 업로드")
-    photo_type = st.radio("사진 유형", ["흑백", "컬러"], horizontal=True, key="photo_type_selector")
-    description = st.text_input("사진에 대한 간단한 설명", key="photo_description", placeholder="예: 1970년대 외할아버지의 결혼식")
-    uploaded_file = st.file_uploader("사진 파일 업로드", type=["png", "jpg", "jpeg", "bmp", "tiff"], key="photo_uploader")
+# 사진 유형 라디오 제거 → 사용자 설명만 입력
+description = st.text_input(
+    "사진에 대한 간단한 설명",
+    key="photo_description",
+    placeholder="예: 1970년대 외할아버지의 결혼식"
+)
 
-    if uploaded_file is not None:
-        file_bytes = uploaded_file.getvalue()
-        digest = hashlib.sha1(file_bytes).hexdigest()
-        if rstate["upload_digest"] != digest:
-            reset_restoration(digest, file_bytes, photo_type, description, uploaded_file.name)
-            ensure_restoration_state()["current_bytes"] = file_bytes
-            handle_auto_colorization(photo_type)
-        else:
-            rstate["description"] = description
-            rstate["photo_type"] = photo_type
+uploaded_file = st.file_uploader(
+    "사진 파일 업로드",
+    type=["png", "jpg", "jpeg", "bmp", "tiff"],
+    key="photo_uploader"
+)
+
+if uploaded_file is not None:
+    file_bytes = uploaded_file.getvalue()
+    digest = hashlib.sha1(file_bytes).hexdigest()
+    if rstate["upload_digest"] != digest:
+        # photo_type 대신 ""(빈 문자열) 전달
+        reset_restoration(digest, file_bytes, "", uploaded_file.name)
+        ensure_restoration_state()["current_bytes"] = file_bytes
+    else:
+        rstate["description"] = description
 
 # ---------- 옵션 ----------
 allow_repeat = st.checkbox("고급 옵션(실험적) - 동일 작업 반복 허용 (최대 3회)", key="allow_repeat")
@@ -1117,7 +1155,9 @@ else:
             run_denoise()
     with c3:
         if st.button("스토리 생성", key="btn_story", use_container_width=True):
-            run_story_generation()
+            story_text = run_story_generation()
+            if story_text:
+                rstate["story"] = {"text": story_text}
 
     st.divider()
     col_a, col_b = st.columns(2)
@@ -1131,7 +1171,7 @@ else:
         st.markdown("<h3 class='col-title'>복원 결과</h3>", unsafe_allow_html=True)
         if rstate["history"]:
             latest = rstate["history"][-1]
-            st.image(latest["bytes"], use_container_width=True, caption=latest["label"])
+            last_img = st.image(latest["bytes"], use_container_width=True, caption=latest["label"])
             st.markdown(f"<div class='img-cap'>{format_status(latest['status'])}</div>", unsafe_allow_html=True)
             if latest.get("note"):
                 st.markdown(f"*{latest['note']}*")
@@ -1170,9 +1210,9 @@ else:
         info = rstate["story"]
 
         # 맨 아래 스크롤 앵커
-        st.markdown('<div id="story-bottom"></div>', unsafe_allow_html=True)
+        st.markdown(f'<div id="story-bottom"></div>', unsafe_allow_html=True)
 
-        import base64, html
+        import base64, html, time
 
         orig_bytes = rstate["original_bytes"]
         last_bytes = (rstate["history"][-1]["bytes"] if rstate["history"] else rstate["current_bytes"] or orig_bytes)
@@ -1182,6 +1222,13 @@ else:
         fname = (rstate.get("file_name") or "image").rsplit("/", 1)[-1]
         dn_orig = f"original_{fname}".replace(" ", "_")
         dn_last = f"restored_{fname}".replace(" ", "_")
+
+        with st.spinner("🧠 Gemma가 이미지를 해석/평가하는 중..."):
+            t0 = time.time()
+            story_text = run_story_generation()
+            spent = time.time() - t0
+
+        story_html = story_text.replace("\n", "<br>")
 
         lane_html = f"""
         <style>
@@ -1201,8 +1248,9 @@ else:
           .story-img img {{ width:100%; border-radius:8px; display:block; }}
           .story-img .dl {{ margin-top:6px; font-size:.9rem; color:#6b7280; }}
         </style>
+
         <div class="story-lane">
-          <div class="story-card">{html.escape(info["text"]).replace("\n", "<br>")}</div>
+          <div class="story-card">{story_html}</div>
           <a class="story-img" href="data:image/png;base64,{b64_orig}" download="{dn_orig}">
             <img src="data:image/png;base64,{b64_orig}" alt="원본 이미지"/>
             <div class="dl">원본 다운로드</div>
@@ -1214,7 +1262,7 @@ else:
         </div>
         """
         st.markdown(lane_html, unsafe_allow_html=True)
-
+        st.caption(f"소요 시간: {spent:.2f}s")
 if st.session_state.get("scroll_to_story"):
     st.markdown("""
     <script>
